@@ -7,6 +7,12 @@
       "path": "todo-list.js",
       "declarations": [],
       "exports": []
+    },
+    {
+      "kind": "javascript-module",
+      "path": "dist/todo-list.js",
+      "declarations": [],
+      "exports": []
     }
   ]
 }

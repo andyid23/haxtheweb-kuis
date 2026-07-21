@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Explode Quiz - Ringkasan Fix HAX Save</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --card: #121a33;
+        --muted: #9fb0e0;
+        --text: #eaf0ff;
+        --ok: #2ecc71;
+        --warn: #f1c40f;
+        --bad: #ff6b6b;
+        --line: #253059;
+        --accent: #7aa2ff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+        background: linear-gradient(180deg, #0b1020 0%, #0f1730 100%);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .wrap {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 28px 20px 56px;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.25;
+        margin-top: 0;
+      }
+      h1 {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
+      }
+      h2 {
+        margin: 28px 0 10px;
+        font-size: 1.25rem;
+      }
+      .sub {
+        color: var(--muted);
+        margin-bottom: 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+        margin: 12px 0;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        padding: 4px 8px;
+        border-radius: 999px;
+      }
+      .ok {
+        background: rgba(46, 204, 113, 0.15);
+        color: #93f0ba;
+        border: 1px solid rgba(46, 204, 113, 0.35);
+      }
+      .warn {
+        background: rgba(241, 196, 15, 0.15);
+        color: #ffe28a;
+        border: 1px solid rgba(241, 196, 15, 0.35);
+      }
+      .bad {
+        background: rgba(255, 107, 107, 0.15);
+        color: #ffb2b2;
+        border: 1px solid rgba(255, 107, 107, 0.35);
+      }
+      code,
+      pre {
+        font-family: Consolas, Monaco, monospace;
+      }
+      pre {
+        background: #0a1128;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        overflow: auto;
+        color: #d8e2ff;
+      }
+      ul {
+        margin: 8px 0 0 18px;
+      }
+      a {
+        color: var(--accent);
+      }
+      .small {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+      @media (min-width: 860px) {
+        .grid-2 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .kpi {
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+      .kpi b {
+        color: var(--text);
+      }
+      .footer {
+        margin-top: 28px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .hr {
+        border-top: 1px dashed var(--line);
+        margin: 18px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <h1>Ringkasan Fix: <code><explode-quiz></code> dan HAX Save</h1>
+      <p class="sub">
+        Dokumen ini merangkum akar masalah, perubahan teknis, dampak warning, dan panduan pengembangan komponen ke depan.
+      </p>
+
+      <section class="card">
+        <span class="badge ok">Status saat ini</span>
+        <p class="kpi">
+          <b>Save sudah berhasil</b> — atribut <code>questions</code> tersimpan ke HTML dan dapat direstore saat reload.
+        </p>
+        <p class="kpi">
+          Warning <code>Import already in progress, skipping duplicate call</code> masih bisa muncul, namun pada hasil akhir bersifat <b>non-fatal</b> (tidak memblok save).
+        </p>
+      </section>
+
+      <h2>1) Akar Masalah Awal</h2>
+      <div class="card">
+        <ul>
+          <li>
+            Properti <code>questions</code> bertipe Array sebelumnya tidak aman untuk proses serialisasi HAX ke HTML.
+          </li>
+          <li>
+            HAX menyimpan konten sebagai atribut DOM; jika nilai tidak konsisten/invalid, data tidak tersimpan atau runtime jadi tidak stabil.
+          </li>
+          <li>
+            Jalur UI editor berbasis code-editor/monaco pada konfigurasi <code>questions</code> ikut memicu potensi hang/race pada mode edit tertentu.
+          </li>
+        </ul>
+      </div>
+
+      <h2>2) Perubahan yang Diterapkan</h2>
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>Persistensi atribut questions</h3>
+          <ul>
+            <li><code>questions</code> di-set <code>reflect: true</code></li>
+            <li>Converter custom:
+              <ul>
+                <li><code>toAttribute</code> serialize JSON</li>
+                <li><code>fromAttribute</code> parse JSON dengan fallback aman</li>
+              </ul>
+            </li>
+            <li>Menangani nilai buruk: <code>undefined</code>, <code>null</code>, <code>[object Object]</code>, parse error</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Hardening HAX metadata</h3>
+          <ul>
+            <li>Tambahkan <code>settings.developer: []</code></li>
+            <li>Tambahkan <code>saveOptions.unsetAttributes</code> untuk state internal</li>
+            <li>Mencegah state transient ikut tersimpan ke HTML saat save</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="card">
+        <h3>Isolasi jalur rawan hang</h3>
+        <ul>
+          <li>Field <code>questions</code> di <code>settings.configure</code> dihapus sementara.</li>
+          <li>
+            Editing soal diarahkan lewat editor internal komponen (<code>Edit Soal Kuis</code>), lalu persisted ke atribut <code>questions</code>.
+          </li>
+        </ul>
+      </div>
+
+      <h2>3) Makna Warning HAX</h2>
+      <div class="card">
+        <span class="badge warn">Warning</span>
+        <pre>hax-body.js:445 Import already in progress, skipping duplicate call</pre>
+        <ul>
+          <li>Ini guard di pipeline import HAX untuk mencegah import ganda saat ada request overlap/race.</li>
+          <li>
+            Efek: panggilan duplikat diabaikan. Biasanya tidak fatal bila state akhir tetap konsisten.
+          </li>
+          <li>
+            Pada hasil saat ini: save tetap berjalan, jadi warning ini bukan blocker utama.
+          </li>
+        </ul>
+      </div>
+
+      <h2>4) Dampak ke Pengguna Authoring</h2>
+      <div class="card">
+        <ul>
+          <li>Author dapat save konten tanpa kehilangan data soal.</li>
+          <li><code>questions</code> tersimpan di tag HTML dan kembali saat reload.</li>
+          <li>Konfigurasi soal lewat panel HAX untuk field JSON sementara tidak dipakai (pakai editor internal komponen).</li>
+        </ul>
+      </div>
+
+      <h2>5) Panduan Pengembangan ke Depan</h2>
+      <div class="grid grid-2">
+        <article class="card">
+          <h3>Prinsip desain komponen HAX-friendly</h3>
+          <ul>
+            <li>Semua data penting harus bisa round-trip lewat atribut HTML.</li>
+            <li>Pisahkan <b>state persisten</b> vs <b>state UI sementara</b>.</li>
+            <li>Gunakan <code>unsetAttributes</code> untuk state sementara/editor.</li>
+            <li>Converter wajib defensif untuk input invalid.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <h3>Strategi UI konfigurasi</h3>
+          <ul>
+            <li>Hindari field JSON kompleks di code-editor jika pipeline belum stabil.</li>
+            <li>Prioritaskan editor internal komponen untuk struktur data kompleks.</li>
+            <li>Jika perlu panel HAX, gunakan format sederhana + validasi ketat.</li>
+          </ul>
+        </article>
+      </div>
+
+      <h2>6) Checklist Regression yang Direkomendasikan</h2>
+      <div class="card">
+        <ul>
+          <li>Edit mode ON → ubah quiz → save → reload (ulang 2–3 kali)</li>
+          <li>Pastikan atribut <code>questions='[...]'</code> tetap valid JSON</li>
+          <li>Uji flow quiz penuh: name → question → result</li>
+          <li>Uji halaman lain di HAX editor agar warning import tidak berdampak lintas halaman</li>
+        </ul>
+      </div>
+
+      <h2>7) Contoh Snippet Konsep Aman</h2>
+      <div class="card">
+        <pre>// contoh konsep (ringkas)
+questions: {
+  type: Array,
+  attribute: "questions",
+  reflect: true,
+  converter: {
+    fromAttribute(value) { /* parse defensif */ },
+    toAttribute(value) { /* JSON.stringify aman */ }
+  }
+},
+saveOptions: {
+  unsetAttributes: ["_screen", "_tempQuestions", "_editingIndex", "..."]
+}</pre>
+      </div>
+
+      <div class="hr"></div>
+      <p class="footer">
+        File ini dibuat sebagai dokumentasi implementasi dan panduan mitigasi untuk iterasi komponen berikutnya.
+      </p>

@@ -1,6 +1,7 @@
 import { DDDSuper } from "@haxtheweb/d-d-d/d-d-d.js";
 import { LitElement, html, css } from "lit";
 import { I18NMixin } from "@haxtheweb/i18n-manager/lib/I18NMixin.js";
+import confetti from "canvas-confetti";
 
 const DEFAULT_QUESTIONS = [
   {
@@ -133,6 +134,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         },
       },
       scriptFunctionName: { type: String, attribute: true },
+      spreadsheetId: { type: String, attribute: "spreadsheet-id", reflect: true },
+      accessToken: { type: String, attribute: "access-token" },
+      appsScriptUrl: { type: String, attribute: "apps-script-url" },
       editable: { type: Boolean, attribute: true, reflect: true },
       editing: { type: Boolean, attribute: true, reflect: true },
       _screen: { state: true },
@@ -161,8 +165,16 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
   constructor() {
     super();
+    let fn = confetti;
+    if (fn && typeof fn !== "function" && typeof fn.default === "function") {
+      fn = fn.default;
+    }
+    this._confettiFn = fn;
     this.questions = DEFAULT_QUESTIONS;
     this.scriptFunctionName = "submitQuizResult";
+    this.spreadsheetId = "";
+    this.accessToken = "";
+    this.appsScriptUrl = "";
     this.editable = false;
     this._screen = "name";
     this._studentName = "";
@@ -263,19 +275,6 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
   connectedCallback() {
     super.connectedCallback();
-
-    // Dynamic import canvas-confetti
-    import("canvas-confetti/dist/confetti.module.mjs")
-      .then((mod) => {
-        this._confettiFn = mod.default;
-      })
-      .catch((err) => {
-        console.warn(
-          "[explode-quiz] canvas-confetti gagal dimuat — efek konfeti dinonaktifkan:",
-          err,
-        );
-        this._confettiFn = null;
-      });
 
     // HAXcms autoloader integration: register with HAXStore element tray
     if (
@@ -417,7 +416,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         class="edit-questions-btn"
         @click="${this._openEditorFromName}"
         aria-label="${this.t.ariaCloseEditor}"
-        ?hidden="${!this._inHaxEditor}"
+        ?hidden="${!this._inHaxEditor && !this.editable}"
       >
         ${this.t.editTitle}
       </button>
@@ -515,6 +514,15 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       this._feedbackPositive = false;
     } else {
       this._submitToSheets(this._studentName, this._score);
+      
+      // Always dispatch quiz-saved event for activity tracking
+      const percentage = Math.round((this._score / this.questions.length) * 100);
+      this.dispatchEvent(new CustomEvent("quiz-saved", {
+        detail: { name: this._studentName, score: percentage },
+        bubbles: true,
+        composed: true
+      }));
+      
       this._screen = "result";
       // Trigger confetti if score >= 80%
       if (this._score / this.questions.length >= 0.8) {
@@ -557,7 +565,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         class="edit-questions-btn"
         @click="${this._openEditor}"
         aria-label="${this.t.ariaCloseEditor}"
-        ?hidden="${!this._inHaxEditor}"
+        ?hidden="${!this._inHaxEditor && !this.editable}"
       >
         ${this.t.editTitle}
       </button>
@@ -588,30 +596,105 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   }
 
   _submitToSheets(name, score) {
-    if (
-      typeof globalThis.google === "undefined" ||
-      !globalThis.google?.script?.run
-    ) {
-      console.warn(
-        "[explode-quiz] google.script.run tidak tersedia — melewati pengiriman ke Sheets",
-      );
+    const percentage = Math.round((score / this.questions.length) * 100);
+    
+    // Priority 1: Use Apps Script URL directly (no backend needed!)
+    if (this.appsScriptUrl) {
+      console.log("[explode-quiz] Mengirim ke Apps Script URL...", name, percentage);
+      
+      const payload = {
+        timestamp: new Date().toISOString(),
+        name: name,
+        score: percentage,
+        totalQuestions: this.questions.length
+      };
+      
+      fetch(this.appsScriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',  // Apps Script requires this for cross-origin
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(() => {
+        // With no-cors mode, we can't read response, but request was sent
+        console.log("[explode-quiz] Data berhasil dikirim ke Apps Script");
+        this.dispatchEvent(new CustomEvent("quiz-saved", {
+          detail: { name, score: percentage, data: payload },
+          bubbles: true,
+          composed: true
+        }));
+      })
+      .catch(err => {
+        console.error("[explode-quiz] Error mengirim ke Apps Script:", err);
+        // Still dispatch event for activity tracking
+        this.dispatchEvent(new CustomEvent("quiz-saved", {
+          detail: { name, score: percentage },
+          bubbles: true,
+          composed: true
+        }));
+      });
+      return;
+    }
+    
+    // Priority 2: Use backend API with spreadsheetId
+    if (this.spreadsheetId) {
+      console.log("[explode-quiz] Mengirim ke Sheets API via backend...", name, score);
+      fetch('/api/save-quiz-result', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          spreadsheetId: this.spreadsheetId,
+          name,
+          score,
+          accessToken: this.accessToken || ""
+        })
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Gagal menyimpan hasil kuis");
+        return res.json();
+      })
+      .then(data => {
+        console.log("[explode-quiz] Data berhasil disimpan ke Google Sheets:", data);
+        this.dispatchEvent(new CustomEvent("quiz-saved", {
+          detail: { name, score: percentage, data },
+          bubbles: true,
+          composed: true
+        }));
+      })
+      .catch(err => {
+        console.error("[explode-quiz] Error menyimpan ke Google Sheets:", err);
+      });
       return;
     }
 
-    const payload = {
-      timestamp: new Date().toISOString(),
-      name,
-      score,
-    };
+    if (
+      typeof globalThis.google !== "undefined" &&
+      globalThis.google?.script?.run
+    ) {
+      const payload = {
+        timestamp: new Date().toISOString(),
+        name,
+        score,
+      };
 
-    globalThis.google.script.run
-      .withSuccessHandler(() =>
-        console.log("[explode-quiz] Data berhasil dikirim ke Sheets"),
-      )
-      .withFailureHandler((err) =>
-        console.error("[explode-quiz] Gagal mengirim ke Sheets:", err),
-      )
-      [this.scriptFunctionName](payload);
+      globalThis.google.script.run
+        .withSuccessHandler(() =>
+          console.log("[explode-quiz] Data berhasil dikirim ke Sheets"),
+        )
+        .withFailureHandler((err) =>
+          console.error("[explode-quiz] Gagal mengirim ke Sheets:", err),
+        )
+        [this.scriptFunctionName](payload);
+      return;
+    }
+
+    console.warn(
+      "[explode-quiz] Google Sheets belum dikonfigurasi (spreadsheet-id / access-token kosong)",
+    );
   }
 
   _openEditor() {
@@ -965,6 +1048,13 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._editingIndex = -1;
     this._screen = this._editorOrigin || "result";
     this._editorOrigin = "result";
+
+    // Dispatch questions-changed event
+    this.dispatchEvent(new CustomEvent("questions-changed", {
+      bubbles: true,
+      composed: true,
+      detail: { questions: this.questions }
+    }));
   }
 
   _cancelAll() {

@@ -1,6 +1,6 @@
-import { DDDSuper } from "@haxtheweb/d-d-d/d-d-d.js";
-import { LitElement, html, css } from "lit";
-import { I18NMixin } from "@haxtheweb/i18n-manager/lib/I18NMixin.js";
+import { DDDSuper } from '@haxtheweb/d-d-d/d-d-d.js';
+import { LitElement, css, html } from 'lit';
+import { I18NMixin } from '@haxtheweb/i18n-manager/lib/I18NMixin.js';
 
 class TodoList extends I18NMixin(DDDSuper(LitElement)) {
   static get tag() {
@@ -761,3 +761,4 @@ class TodoList extends I18NMixin(DDDSuper(LitElement)) {
 }
 
 globalThis.customElements.define(TodoList.tag, TodoList);
+//# sourceMappingURL=todo-list.js.map
