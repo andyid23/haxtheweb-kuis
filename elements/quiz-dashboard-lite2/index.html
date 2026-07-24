@@ -35,30 +35,93 @@
 <body>
 
     <quiz-dashboard-lite2 
-    apps-script-url="https://script.google.com/macros/s/AKfycbzidCNqEpXqeoWLevC7fqB9vN0-0H6y4EFIKyewXtXZEcDbsSdboO2uizDL98gDjnfZ2A/exec" 
+    apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec" 
     sheet-name="Pertemuan 2">
   </quiz-dashboard-lite2>
   
   <div id="demo">
+
+
     <h1>quiz-dashboard-lite</h1>
     <!-- this is going to do whatever the tag's defaults are -->
     <h2>Default</h2>
-    <quiz-dashboard-lite2     apps-script-url="https://script.google.com/macros/s/AKfycbzL_idQAG6fgK249zTFmm0EkwhhC2skH_DFsciPg7wQfaH1RLugyDDJ8jhLYTOTEVOlOQ/exec" 
+    <quiz-dashboard-lite2     apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec" 
     sheet-name="Pertemuan 3"></quiz-dashboard-lite2>
 
 
     <h2>Slot usage</h2>
 
-      <quiz-dashboard-lite2  data-accent="2" data-primary="17"   apps-script-url="https://script.google.com/macros/s/AKfycbzL_idQAG6fgK249zTFmm0EkwhhC2skH_DFsciPg7wQfaH1RLugyDDJ8jhLYTOTEVOlOQ/exec" 
+      <quiz-dashboard-lite2  data-accent="2" data-primary="17"   apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec" 
     sheet-name="Pertemuan 4"><div>Contoh isi slot content</div></quiz-dashboard-lite2>
 
+<p>slot conten isi nya muncul di atas dashboard quiz</p>
+
+
+<h2>Property usage</h2>
+
+<quiz-dashboard-lite2 id="example" title="Sample property title" data-accent="2" data-primary="16"   apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec" 
+sheet-name="Pertemuan 5"><div>Contoh isi slot content</div>
 
 
 
-    <h2>Property usage</h2>
-    <quiz-dashboard-lite2 id="example" title="Sample property title"></quiz-dashboard-lite2>
+<explode-quiz
+id="uh1"
+sheet-name="Ulangan Harian 1"
+    editable="true"
+    questions='[
+      {"question": "Apa kepanjangan dari HAX?", "choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"], "correct": 1},
+      {"question": "Lit Element digunakan untuk?", "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"], "correct": 1},
+      {"question": "Google Sheets API digunakan untuk?", "choices": ["Desain Grafis", "Manipulasi Data Spreadsheet", "Video Editing", "Music Production"], "correct": 1}
+    ]'>
+  </explode-quiz>
+</quiz-dashboard-lite2>
+
+</div>
+
+<div id="demo">
+  <h2>Slot usage</h2>
+  <quiz-dashboard-lite2  data-accent="2" data-primary="17"   apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec" 
+    sheet-name="Pertemuan 6" view-mode="lecturer">
+    Contoh isi slot content tanpa div
+    <div>Contoh isi slot content</div></quiz-dashboard-lite2>
+</div>
+
+<p>slot conten isi nya muncul di atas quiz harian</p>
+
+
+<div>
+
+  <explode-quiz
+    id="uh1"
+    sheet-name="Ulangan Harian 1"
+    editable="true"
+    questions='[
+      {"question": "Aaapa kepanjangan dari HAX2?", "choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"], "correct": 1},
+      {"question": "Lit Element digunakan untuk?", "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"], "correct": 1},
+      {"question": "Google Sheets API digunakan untuk?", "choices": ["Desain Grafis", "Manipulasi Data Spreadsheet", "Video Editing", "Music Production"], "correct": 1}
+    ]'><div>apa itu ulangan harian</div>
+  </explode-quiz>
+
+
+
   </div>
-  <script type="module" src="./quiz-dashboard-lite2.js"></script>
+    <script type="module">
+    const quiz = document.querySelector('#uh1');
+    const auth = document.querySelector('quiz-user-auth');
+
+    // Sinkronkan data user ke quiz
+    window.addEventListener('quiz-user-login', (e) => {
+      quiz.studentId = e.detail.studentId;
+      quiz.studentName = e.detail.nama;
+      quiz.studentNis = e.detail.nis;
+      quiz.studentAbsen = e.detail.absen;
+      quiz.studentKelas = e.detail.kelas;
+    });
+  </script>
+
+
+
+<script type="module" src="./quiz-dashboard-lite2.js"></script>
 
   <!-- Take HAX, the Web and you further down the rabbit hole -->
   <style>

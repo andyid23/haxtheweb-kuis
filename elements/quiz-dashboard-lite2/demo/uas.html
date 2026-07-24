@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: Ujian Akhir Semester (UAS)</title>
+  <script type="module" src="../quiz-dashboard-lite2.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>🎓 Ujian Akhir Semester (UAS)</h1>
+  <div class="info">
+    <strong>Properties yang dikirim:</strong><br>
+    <code>quiz-category="uas"</code> &mdash; Masuk kalkulasi nilai akhir (bobot 2/8)<br>
+    <code>sheet-name="UAS"</code> &mdash; Sheet khusus UAS<br><br>
+    <strong>Catatan:</strong> Dosen bisa input/manual edit skor UAS langsung di Google Sheets atau dari Mode Dosen di dashboard.
+  </div>
+
+  <quiz-user-auth></quiz-user-auth>
+
+  <explode-quiz
+    id="uas-quiz"
+    sheet-name="UAS"
+    editable="true"
+    questions='[
+      {"question": "Jelaskan arsitektur komponen berbasis Lit Element!", "choices": ["Monolith", "Microfrontend modular dengan properties & events", "Server-side rendering only", "Static HTML pages"], "correct": 1},
+      {"question": "Cara terbaik menyimpan data di HAXcms?", "choices": ["localStorage saja", "Google Sheets via Apps Script", "Hardcode di HTML", "Cookies"], "correct": 1},
+      {"question": "Apa keuntungan Web Components?", "choices": ["Framework-dependent", "Framework-agnostic & reusable", "Hanya bisa di Chrome", "Membutuhkan jQuery"], "correct": 1}
+    ]'>
+  </explode-quiz>
+
+  <script type="module">
+    const quiz = document.querySelector('#uas-quiz');
+    window.addEventListener('quiz-user-login', (e) => {
+      quiz.studentId = e.detail.studentId;
+      quiz.studentName = e.detail.nama;
+      quiz.studentNis = e.detail.nis;
+      quiz.studentAbsen = e.detail.absen;
+      quiz.studentKelas = e.detail.kelas;
+    });
+  </script>
+</body>
+</html>

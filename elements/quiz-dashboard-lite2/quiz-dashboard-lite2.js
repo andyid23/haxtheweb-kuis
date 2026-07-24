@@ -17,6 +17,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
       ...super.properties,
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
       sheetName: { type: String, attribute: "sheet-name" },
+      viewMode: { type: String, attribute: "view-mode" },
       _spreadsheetId: { state: true },
       _activeTab: { state: true },
       _successMsg: { state: true },
@@ -29,6 +30,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
     super();
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
+    this.viewMode = "student"; // "student" atau "lecturer"
     this._user = null;
     this._spreadsheetId = "";
     this._activeTab = 0;
@@ -231,7 +233,8 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
             <transparent-gradebook
               .appsScriptUrl="${this.appsScriptUrl}"
               .studentId="${this._user?.studentId || ''}"
-              .studentName="${this._user?.nama || ''}">
+              .studentName="${this._user?.nama || ''}"
+              .viewMode="${this.viewMode}">
             </transparent-gradebook>
           </div>
         ` : html`
@@ -280,6 +283,17 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
             title: "Nama Pertemuan",
             inputMethod: "textfield",
             default: "Pertemuan"
+          },
+          {
+            property: "viewMode",
+            title: "Mode Tampilan",
+            inputMethod: "select",
+            options: {
+              student: "View Mahasiswa",
+              lecturer: "Mode Dosen (Console)"
+            },
+            default: "student",
+            description: "Disable mode tertentu: 'student' = mahasiswa hanya lihat, 'lecturer' = dosen bisa input nilai"
           }
         ]
       }

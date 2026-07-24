@@ -1428,6 +1428,7 @@ export class TransparentGradebook extends LitElement {
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
       studentId: { type: String, attribute: "student-id" },
       studentName: { type: String, attribute: "student-name" },
+      viewMode: { type: String, attribute: "view-mode" },
       _logs: { type: Array },
       _thresholds: { type: Object },
       _gradesConfig: { type: Object },
@@ -1442,6 +1443,7 @@ export class TransparentGradebook extends LitElement {
     this.appsScriptUrl = "";
     this.studentId = "";
     this.studentName = "";
+    this.viewMode = "student";
     this._logs = getInitialLogs();
     this._thresholds = getThresholds();
     this._gradesConfig = getGradesConfig();
@@ -1532,7 +1534,7 @@ export class TransparentGradebook extends LitElement {
   _getFinalScore() {
     const tw = this._gradesConfig.totalWeight || 8;
     const attScore = this._getAttendanceScore().overall;
-    const uhScore = this._scores.ulanganHarian?.highest || 0;
+    const uhScore = this._scores.ulanganHarian?.average || this._scores.ulanganHarian?.highest || 0;
     const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
     const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
 
@@ -1808,7 +1810,7 @@ export class TransparentGradebook extends LitElement {
     const finalScore = this._getFinalScore();
     const gradeLetter = this._getGradeLetter(finalScore);
     const tw = this._gradesConfig.totalWeight || 8;
-    const uhCount = this._scores.formatif?.count || 0;
+    const uhCount = this._scores.ulanganHarian?.count || 0;
 
     const mockStudents = [
       { name: "Ahmad Dahlan", active: "Sangat Aktif", activities: 28, score: 92 },
@@ -1823,9 +1825,11 @@ export class TransparentGradebook extends LitElement {
           <h3>📖 Transparansi Nilai & Hasil Belajar</h3>
           <div style="display: flex; gap: 8px; align-items: center;">
             <span style="font-size: 11px; color: #888;">Bobot: Kehadiran(${this._gradesConfig.attendanceWeight}) : UH(${this._gradesConfig.ulanganHarianWeight}) : UTS(${this._gradesConfig.utsWeight}) : UAS(${this._gradesConfig.uasWeight}) = ${tw}</span>
-            <button class="toggle-btn" @click="${() => this._isLecturerMode = !this._isLecturerMode}">
-              ⚙️ ${this._isLecturerMode ? "Kembali ke View Mahasiswa" : "Masuk Mode Dosen (Console)"}
-            </button>
+            ${this.viewMode === "lecturer" ? html`
+              <button class="toggle-btn" @click="${() => this._isLecturerMode = !this._isLecturerMode}">
+                ⚙️ ${this._isLecturerMode ? "Kembali ke View Mahasiswa" : "Masuk Mode Dosen (Console)"}
+              </button>
+            ` : ""}
           </div>
         </div>
 
@@ -1844,6 +1848,7 @@ export class TransparentGradebook extends LitElement {
           <div class="summary-item">
             <span class="summary-label">Skor Ulangan Harian (${this._gradesConfig.ulanganHarianWeight}/${tw})</span>
             <span class="summary-val">${uhScore}%</span>
+            <span style="font-size: 11px; color: #888;">Rata-rata ${uhCount} kuis</span>
           </div>
           <div class="summary-item">
             <span class="summary-label">Skor UTS (${this._gradesConfig.utsWeight}/${tw})</span>
