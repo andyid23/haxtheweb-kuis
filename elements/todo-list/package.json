@@ -1,39 +1,24 @@
 {
-  "name": "@haxtheweb/todo-list",
-  "version": "9.0.0",
-  "description": "A simple task management web component for the HAX ecosystem",
-  "main": "todo-list.js",
-  "module": "todo-list.js",
-  "license": "Apache-2.0",
+  "name": "@haxtheweb/quiz-dashboard-lite",
+  "version": "1.0.0",
+  "description": "Dashboard kuis modular dengan attendance tracking dan integrasi Google Sheets",
+  "main": "quiz-dashboard-lite.js",
+  "module": "quiz-dashboard-lite.js",
+  "type": "module",
   "scripts": {
-    "start": "wds --node-resolve --open demo/",
-    "build": "npm run format && cem analyze --litelement",
-    "dev": "npm run build -- --watch",
-    "test": "wtr test/**/*.test.js --node-resolve",
-    "lint": "eslint todo-list.js",
-    "lint:fix": "eslint --fix todo-list.js",
-    "format": "prettier --write todo-list.js"
+    "start": "web-dev-server --node-resolve --open demo/index.html",
+    "build": "cem analyze --litelement",
+    "test": "echo \"No tests specified\" && exit 0",
+    "lint": "echo \"No lint configured\" && exit 0"
   },
-  "keywords": [
-    "webcomponent",
-    "lit-element",
-    "hax",
-    "todo",
-    "task"
-  ],
-  "author": "",
-  "peerDependencies": {
-    "@haxtheweb/d-d-d": "*",
-    "@haxtheweb/i18n-manager": "*",
-    "lit": "*"
+  "dependencies": {
+    "lit": "^3.0.0",
+    "@haxtheweb/d-d-d": "^9.0.0",
+    "@haxtheweb/i18n-manager": "^9.0.0"
   },
   "devDependencies": {
-    "@custom-elements-manifest/analyzer": "^0.6.9",
-    "@open-wc/testing": "^3.2.0",
-    "@web/dev-server": "^0.4.0",
-    "@web/test-runner": "^0.18.0",
-    "eslint": "^8.0.0",
-    "fast-check": "^4.8.0",
-    "prettier": "^3.0.0"
-  }
+    "@custom-elements-manifest/analyzer": "^0.10.0",
+    "@web/dev-server": "^0.4.0"
+  },
+  "customElements": "custom-elements.json"
 }

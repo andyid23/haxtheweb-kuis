@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial Materi dan Aktivitas Kuis</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #202124; line-height: 1.55; }
+    body { max-width: 900px; margin: auto; padding: 2rem 1rem; }
+    pre { overflow-x: auto; padding: 1rem; background: #f3f4f6; border-radius: .5rem; }
+    code { font-family: ui-monospace, monospace; }
+    .note { padding: 1rem; border-left: 4px solid #6750a4; background: #f4f0ff; }
+    li { margin: .45rem 0; }
+  </style>
+</head>
+<body>
+  <h1>Tutorial Membuat Materi, Aktivitas, dan Kuis</h1>
+  <p>Gunakan tutorial ini untuk membuat satu pertemuan, merekam aktivitas siswa, menyimpan hasil kuis, dan membaca rekap.</p>
+
+  <h2>1. Siapkan Apps Script</h2>
+  <ol>
+    <li>Buka Google Spreadsheet yang dipakai aplikasi.</li>
+    <li>Buka <strong>Extensions → Apps Script</strong>.</li>
+    <li>Tempel kode dari <code>lib/code.gs</code>, simpan, lalu jalankan fungsi pengujian bila diperlukan.</li>
+    <li>Deploy sebagai Web app dengan <strong>Execute as: Me</strong> dan akses <strong>Anyone</strong>.</li>
+    <li>Salin URL yang berakhiran <code>/exec</code>.</li>
+    <li>Setelah mengubah Apps Script, selalu buat <strong>New version</strong> pada deployment.</li>
+  </ol>
+
+  <h2>2. Buat materi dan pertemuan</h2>
+  <p>Pasang elemen dashboard dengan nama pertemuan yang diinginkan:</p>
+  <pre><code>&lt;quiz-dashboard-lite2
+  apps-script-url="https://script.google.com/macros/s/DEPLOYMENT_ID/exec"
+  sheet-name="Pertemuan 2"&gt;
+&lt;/quiz-dashboard-lite2&gt;</code></pre>
+  <p>Nama tersebut membuat sheet hasil <code>Pertemuan 2 - Kuis</code> dan <code>Pertemuan 2 - Aktivitas</code>.</p>
+
+  <h2>3. Buat aktivitas materi</h2>
+  <p>Gunakan tipe aktivitas berikut pada materi:</p>
+  <ul>
+    <li><code>reading</code> — siswa membaca materi/scroll.</li>
+    <li><code>quiz</code> — aktivitas soal atau evaluasi singkat.</li>
+    <li><code>discussion</code> — diskusi atau forum.</li>
+    <li><code>download</code> — mengunduh bahan.</li>
+  </ul>
+  <p>Setiap aktivitas dikirim dengan data seperti:</p>
+  <pre><code>{
+  "type": "attendance",
+  "activityType": "reading",
+  "description": "Membaca materi pelajaran",
+  "name": "Nama Siswa",
+  "studentId": "STD-12345678",
+  "nis": "12345",
+  "sheet": "Pertemuan 2"
+}</code></pre>
+  <p>Pastikan siswa sudah login agar <code>studentId</code>, NIS, absen, kelas, dan nama otomatis ikut terkirim.</p>
+
+  <h2>4. Lihat hasil</h2>
+  <ul>
+    <li><strong>Pertemuan 2 - Aktivitas</strong>: detail waktu, siswa, tipe aktivitas, dan deskripsi.</li>
+    <li><strong>Pertemuan 2 - Kuis</strong>: detail skor dan metadata siswa.</li>
+    <li><strong>Rangkuman</strong>: total kuis, skor, total aktivitas, reading, quiz activity, discussion, download, dan jumlah pertemuan.</li>
+  </ul>
+  <div class="note">Jika data baru belum muncul, pastikan URL deployment sudah diperbarui dan jalankan ulang aksi setelah deployment baru aktif. Data lama yang hanya memiliki nama tidak dapat dikaitkan ke Student ID secara otomatis.</div>
+
+  <h2>5. Pemeriksaan cepat</h2>
+  <ol>
+    <li>Login memakai kombinasi NIS + email.</li>
+    <li>Buka materi pada <code>Pertemuan 2</code>.</li>
+    <li>Lakukan reading, discussion, atau download.</li>
+    <li>Kerjakan kuis.</li>
+    <li>Periksa tiga sheet di atas.</li>
+    <li>Pastikan baris baru memiliki Student ID dan NIS.</li>
+  </ol>
+</body>
+</html>

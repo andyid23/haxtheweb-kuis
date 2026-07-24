@@ -5,12 +5,17 @@ const LOGS_STORAGE_KEY = "a3_attendance_activity_logs";
 const THRESHOLD_STORAGE_KEY = "a3_attendance_threshold_config";
 const GRADES_STORAGE_KEY = "a3_attendance_grades_config";
 
-// --- SEED/DEMO DATA FOR A RICH INITIAL EXPERIENCE ---
+// --- REAL ACTIVITY DATA ONLY ---
 function getInitialLogs() {
   const stored = localStorage.getItem(LOGS_STORAGE_KEY);
-  if (stored) return JSON.parse(stored);
+  if (stored) {
+    try { return JSON.parse(stored); } catch (_) { return []; }
+  }
 
-  // Generate mock logs over the last 3 weeks to make the heatmap and logs stunning
+  // No seed/demo data. Fresh students start from an empty activity log.
+  return [];
+
+  // Legacy demo generator is kept unreachable for reference only.
   const logs = [];
   const now = new Date();
 
@@ -119,15 +124,17 @@ function getInitialLogs() {
 
 // Global threshold default config
 const DEFAULT_THRESHOLDS = {
-  minWeeklyActivities: 5,
-  minReading: 2,
+  minWeeklyActivities: 8,
+  minReading: 5,
   minQuiz: 1,
-  minDiscussion: 1
+  minDiscussion: 1,
+  minDownload: 1
 };
 
 function getThresholds() {
   const stored = localStorage.getItem(THRESHOLD_STORAGE_KEY);
-  return stored ? JSON.parse(stored) : DEFAULT_THRESHOLDS;
+  const parsed = stored ? JSON.parse(stored) : {};
+  return { ...DEFAULT_THRESHOLDS, ...parsed, minReading: Math.max(parsed.minReading || 0, DEFAULT_THRESHOLDS.minReading) };
 }
 
 // Global grades config defaults
@@ -156,6 +163,14 @@ export class ActivityLogger extends LitElement {
 
   static get properties() {
     return {
+      ...super.properties,
+      appsScriptUrl: { type: String, attribute: "apps-script-url" },
+      sheetName: { type: String, attribute: "sheet-name" },
+      studentId: { type: String, attribute: "student-id" },
+      studentName: { type: String, attribute: "student-name" },
+      studentNis: { type: String, attribute: "student-nis" },
+      studentAbsen: { type: String, attribute: "student-absen" },
+      studentKelas: { type: String, attribute: "student-kelas" },
       _logs: { type: Array },
       _expanded: { type: Boolean },
       _toastMsg: { type: String }
@@ -164,13 +179,22 @@ export class ActivityLogger extends LitElement {
 
   constructor() {
     super();
+    // Tambahan: inisialisasi properti yang dapat di-bind dari atribut
+    this.appsScriptUrl = "";
+    this.sheetName = "Pertemuan";
+    this.studentId = "";
+    this.studentName = "";
+    this.studentNis = "";
+    this.studentAbsen = "";
+    this.studentKelas = "";
     this._logs = getInitialLogs();
     this._expanded = false;
     this._toastMsg = "";
-    
+
     this._handleScroll = this._handleScroll.bind(this);
     this._handleClick = this._handleClick.bind(this);
     this._handleQuizSaved = this._handleQuizSaved.bind(this);
+    this._handleDiscussionSaved = this._handleDiscussionSaved.bind(this);
     this._lastScrollTime = 0;
   }
 
@@ -179,6 +203,7 @@ export class ActivityLogger extends LitElement {
     window.addEventListener("scroll", this._handleScroll, { passive: true });
     window.addEventListener("click", this._handleClick);
     window.addEventListener("quiz-saved", this._handleQuizSaved);
+    window.addEventListener("discussion-saved", this._handleDiscussionSaved);
     window.addEventListener("a3-force-reload", () => {
       this._logs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
     });
@@ -188,6 +213,7 @@ export class ActivityLogger extends LitElement {
     window.removeEventListener("scroll", this._handleScroll);
     window.removeEventListener("click", this._handleClick);
     window.removeEventListener("quiz-saved", this._handleQuizSaved);
+    window.removeEventListener("discussion-saved", this._handleDiscussionSaved);
     super.disconnectedCallback();
   }
 
@@ -216,7 +242,7 @@ export class ActivityLogger extends LitElement {
       } else if (!target.href.includes("javascript:") && !target.href.startsWith("#")) {
         this.logActivity("reading", `Membuka tautan eksternal/internal: ${target.innerText.trim() || target.href}`);
       }
-    } 
+    }
     // Detect material buttons or card clicks
     else if (target.tagName === "MD-OUTLINED-BUTTON" || target.tagName === "MD-FILLED-BUTTON" || target.classList?.contains("card")) {
       const text = target.innerText || target.textContent || "";
@@ -231,6 +257,11 @@ export class ActivityLogger extends LitElement {
     this.logActivity("quiz", `Menyelesaikan Kuis Interaktif (Skor diperoleh: ${score}%)`);
   }
 
+  _handleDiscussionSaved(e) {
+    const thread = e.detail?.thread || e.detail?.title || "Umum";
+    this.logActivity("discussion", `Aktif berdiskusi pada forum: ${thread}`);
+  }
+
   logActivity(type, description) {
     const newLog = {
       id: "log-" + Date.now() + "-" + Math.random(),
@@ -238,20 +269,42 @@ export class ActivityLogger extends LitElement {
       type,
       description
     };
-
+    
+    // 1. Simpan ke LocalStorage (untuk UI real-time)
     const currentLogs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
     currentLogs.unshift(newLog);
     localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(currentLogs));
     this._logs = currentLogs;
 
-    // Trigger global notification event
+    // 2. KIRIM KE APPS SCRIPT V3 (Jika URL tersedia)
+  if (this.appsScriptUrl) {
+    const params = new URLSearchParams({
+      action: "activity",
+      type: "attendance",
+      timestamp: newLog.timestamp,
+      name: this.studentName || "Student",
+      studentId: this.studentId || "",
+      nis: this.studentNis || "",
+      absen: this.studentAbsen || "",
+      kelas: this.studentKelas || "",
+      activityType: type,
+      description: description,
+      sheet: this.sheetName || "Pertemuan"
+    });
+    const url = `${this.appsScriptUrl}?${params.toString()}`;
+    fetch(url, { redirect: "follow" })
+      .then(res => res.json())
+      .then(data => console.log("[activity-logger] Tersimpan:", data))
+      .catch(err => console.warn("[activity-logger] Gagal kirim ke Sheets:", err));
+    }
+
+    // 3. Trigger global notification event
     window.dispatchEvent(new CustomEvent("a3-activity-logged", {
       detail: newLog,
       bubbles: true,
       composed: true
     }));
-
-    // Show neat toast message
+    
     this._showToast(`Aktivitas tercatat: ${description.length > 35 ? description.substring(0, 35) + '...' : description}`);
   }
 
@@ -265,11 +318,11 @@ export class ActivityLogger extends LitElement {
   }
 
   _clearLogs() {
-    if (confirm("Apakah Anda yakin ingin mengatur ulang semua log aktivitas Anda? (Data latihan/seed akan dimuat ulang)")) {
+    if (confirm("Apakah Anda yakin ingin menghapus semua log aktivitas lokal?")) {
       localStorage.removeItem(LOGS_STORAGE_KEY);
-      this._logs = getInitialLogs();
+      this._logs = [];
       window.dispatchEvent(new CustomEvent("a3-activity-logged", { bubbles: true, composed: true }));
-      this._showToast("Log aktivitas telah diset ulang ke data bawaan.");
+      this._showToast("Log aktivitas lokal telah dikosongkan.");
     }
   }
 
@@ -645,15 +698,15 @@ export class AttendanceTracker extends LitElement {
       total: weekLogs.length
     };
 
-    // Calculate goals met
+    // Kriteria 100% hadir: 5 reading + 1 quiz + 1 diskusi + 1 unduh + total aktivitas terpenuhi.
     const readingMet = counts.reading >= this._thresholds.minReading;
     const quizMet = counts.quiz >= this._thresholds.minQuiz;
     const discussionMet = counts.discussion >= this._thresholds.minDiscussion;
+    const downloadMet = counts.download >= this._thresholds.minDownload;
     const totalMet = counts.total >= this._thresholds.minWeeklyActivities;
 
-    // Attendance is achieved if reading, quiz, and discussion requirements are met, and total activities exceed min
-    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (totalMet ? 1 : 0);
-    const attendancePercentage = Math.round((criteriaCount / 4) * 100);
+    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (downloadMet ? 1 : 0) + (totalMet ? 1 : 0);
+    const attendancePercentage = Math.round((criteriaCount / 5) * 100);
 
     return {
       counts,
@@ -661,6 +714,7 @@ export class AttendanceTracker extends LitElement {
         reading: readingMet,
         quiz: quizMet,
         discussion: discussionMet,
+        download: downloadMet,
         total: totalMet
       },
       attendancePercentage,
@@ -849,7 +903,7 @@ export class AttendanceTracker extends LitElement {
 
   render() {
     const stats = this._getWeeklyStats();
-    
+
     // Gauge calculations
     const radius = 65;
     const circumference = 2 * Math.PI * radius;
@@ -989,18 +1043,18 @@ export class EngagementScore extends LitElement {
   _getActivityMap() {
     const days = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
     const now = new Date();
-    
+
     // Group logs by day offset for the past 28 days (4 weeks)
     const map = [];
-    
+
     for (let offset = 27; offset >= 0; offset--) {
       const d = new Date();
       d.setDate(now.getDate() - offset);
-      d.setHours(0,0,0,0);
-      
+      d.setHours(0, 0, 0, 0);
+
       const dayLogs = this._logs.filter(log => {
         const logDate = new Date(log.timestamp);
-        logDate.setHours(0,0,0,0);
+        logDate.setHours(0, 0, 0, 0);
         return logDate.getTime() === d.getTime();
       });
 
@@ -1017,8 +1071,8 @@ export class EngagementScore extends LitElement {
 
   _getStreak() {
     const now = new Date();
-    now.setHours(0,0,0,0);
-    
+    now.setHours(0, 0, 0, 0);
+
     let currentStreak = 0;
     let index = 0;
     let checkDate = new Date(now);
@@ -1026,7 +1080,7 @@ export class EngagementScore extends LitElement {
     while (index < 30) {
       const dayLogs = this._logs.filter(log => {
         const logDate = new Date(log.timestamp);
-        logDate.setHours(0,0,0,0);
+        logDate.setHours(0, 0, 0, 0);
         return logDate.getTime() === checkDate.getTime();
       });
 
@@ -1226,7 +1280,7 @@ export class EngagementScore extends LitElement {
     const activityMap = this._getActivityMap();
     const streak = this._getStreak();
     const totalInteractions = this._logs.length;
-    
+
     // Calculate consistency index (percentage of days active in past 4 weeks)
     const activeDays = activityMap.filter(day => day.count > 0).length;
     const consistencyIndex = Math.round((activeDays / 28) * 100);
@@ -1271,22 +1325,22 @@ export class EngagementScore extends LitElement {
           </div>
           <div class="heatmap-grid">
             ${activityMap.map(cell => {
-              // Level categories based on activity counts
-              let lvl = "lvl-0";
-              if (cell.count > 0 && cell.count <= 2) lvl = "lvl-1";
-              else if (cell.count > 2 && cell.count <= 4) lvl = "lvl-2";
-              else if (cell.count > 4 && cell.count <= 7) lvl = "lvl-3";
-              else if (cell.count > 7) lvl = "lvl-4";
+      // Level categories based on activity counts
+      let lvl = "lvl-0";
+      if (cell.count > 0 && cell.count <= 2) lvl = "lvl-1";
+      else if (cell.count > 2 && cell.count <= 4) lvl = "lvl-2";
+      else if (cell.count > 4 && cell.count <= 7) lvl = "lvl-3";
+      else if (cell.count > 7) lvl = "lvl-4";
 
-              const isSelected = this._selectedCell && this._selectedCell.date.getTime() === cell.date.getTime();
+      const isSelected = this._selectedCell && this._selectedCell.date.getTime() === cell.date.getTime();
 
-              return html`
+      return html`
                 <div class="cell ${lvl} ${isSelected ? 'selected' : ''}" 
                      @click="${() => this._selectCell(cell)}">
                   ${cell.count > 0 ? cell.count : ""}
                 </div>
               `;
-            })}
+    })}
           </div>
 
           <div class="legend">
@@ -1304,7 +1358,7 @@ export class EngagementScore extends LitElement {
         ${this._selectedCell ? html`
           <div class="detail-card">
             <div class="detail-header">
-              <span>📅 Detail Aktivitas: ${this._selectedCell.dayName}, ${this._selectedCell.date.toLocaleDateString("id-ID", {day: 'numeric', month: 'long', year: 'numeric'})}</span>
+              <span>📅 Detail Aktivitas: ${this._selectedCell.dayName}, ${this._selectedCell.date.toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}</span>
               <span style="color: #666;">${this._selectedCell.count} Aktivitas</span>
             </div>
             <div class="detail-logs">
@@ -1312,7 +1366,7 @@ export class EngagementScore extends LitElement {
                 <div style="color: #888; text-align: center; padding: 10px;">Tidak ada rekam aktivitas tercatat pada hari ini.</div>
               ` : this._selectedCell.logs.map(log => html`
                 <div class="detail-item">
-                  <span style="color: #888; font-size: 10px; font-weight: bold; margin-right: 6px;">[${new Date(log.timestamp).toLocaleTimeString("id-ID", {hour: '2-digit', minute:'2-digit'})}]</span>
+                  <span style="color: #888; font-size: 10px; font-weight: bold; margin-right: 6px;">[${new Date(log.timestamp).toLocaleTimeString("id-ID", { hour: '2-digit', minute: '2-digit' })}]</span>
                   <span>${log.description}</span>
                 </div>
               `)}
@@ -1392,31 +1446,31 @@ export class TransparentGradebook extends LitElement {
   }
 
   _getAttendanceScore() {
-    // Simulate past weeks being fully attended, and compute Week 4 dynamically
+    // Real attendance: compute from actual local activity logs only, no hardcoded demo weeks.
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const weekLogs = this._logs.filter(log => new Date(log.timestamp) >= oneWeekAgo);
 
     const counts = {
-      reading: weekLogs.filter(l => l.type === "reading").length,
+      reading: Math.min(weekLogs.filter(l => l.type === "reading").length, this._thresholds.minReading),
       download: weekLogs.filter(l => l.type === "download").length,
       discussion: weekLogs.filter(l => l.type === "discussion").length,
+      quiz: weekLogs.filter(l => l.type === "quiz").length,
       total: weekLogs.length
     };
 
     const readingMet = counts.reading >= this._thresholds.minReading;
-    const quizMet = weekLogs.filter(l => l.type === "quiz").length >= this._thresholds.minQuiz;
+    const quizMet = counts.quiz >= this._thresholds.minQuiz;
     const discussionMet = counts.discussion >= this._thresholds.minDiscussion;
+    const downloadMet = counts.download >= this._thresholds.minDownload;
     const totalMet = counts.total >= this._thresholds.minWeeklyActivities;
 
-    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (totalMet ? 1 : 0);
-    const currentWeekAttendanceScore = Math.round((criteriaCount / 4) * 100);
+    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (downloadMet ? 1 : 0) + (totalMet ? 1 : 0);
+    const currentWeekAttendanceScore = Math.round((criteriaCount / 5) * 100);
 
-    // Cumulative attendance score of 4 weeks (Weeks 1-3 assumed 100% as demo)
-    const overallAttendance = Math.round((100 + 100 + 100 + currentWeekAttendanceScore) / 4);
     return {
       currentWeek: currentWeekAttendanceScore,
-      overall: overallAttendance
+      overall: currentWeekAttendanceScore
     };
   }
 
@@ -1454,7 +1508,7 @@ export class TransparentGradebook extends LitElement {
       const updated = { ...this._gradesConfig, [key]: val };
       localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(updated));
       this._gradesConfig = updated;
-      
+
       // sync with custom event
       window.dispatchEvent(new CustomEvent("a3-force-reload"));
     }

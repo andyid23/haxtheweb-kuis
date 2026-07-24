@@ -1,15 +1,15 @@
 # Memory
 
-## Project Overview
-See @README.md for project overview and @package.json for available npm/pnpm commands for this project.
-
-## Code Style Guidelines
-- Use descriptive variable names
-- Follow existing patterns in the codebase
-- Extract complex conditions into meaningful boolean variables
-
 ## Architecture Notes
-Add important architectural decisions and patterns here.
+- Built on OpenWC toolchain + Lit.
+- Project structure:
+  - `./quiz-dashboard-lite2.js`: Main component.
+  - `./lib/`: Additional JS/web components.
+  - `./lib/*.haxProperties.json`: HAX editor wiring.
+  - `./locales/`: i18n JSON files.
 
 ## Common Workflows
-Document frequently used workflows and commands here.
+- `npm start`: Dev server (with auto-reload).
+- `npm run build`: Build to `dist/`.
+- `npm run release`: Build, version bump, publish to npm.
+- Assets: Use `new URL('./file.ext', import.meta.url).href` for correct bundling.
