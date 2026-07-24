@@ -199,6 +199,16 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
         <button class="tab-btn ${this._activeTab === 2 ? 'active' : ''}" @click="${() => this._activeTab = 2}">${this.t.tabGuide}</button>
       </div>
 
+      <activity-logger
+        .appsScriptUrl="${this.appsScriptUrl}"
+        .sheetName="${this.sheetName}"
+        .studentId="${this._user?.studentId || ''}"
+        .studentName="${this._user?.nama || ''}"
+        .studentNis="${this._user?.nis || ''}"
+        .studentAbsen="${this._user?.absen || ''}"
+        .studentKelas="${this._user?.kelas || ''}">
+      </activity-logger>
+
       <div class="main-content">
         ${this._activeTab === 0 ? html`
           <explode-quiz
@@ -213,21 +223,16 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
             @quiz-saved="${this._onQuizSaved}">
           </explode-quiz>
         ` : this._activeTab === 1 ? html`
-          <activity-logger
-            .appsScriptUrl="${this.appsScriptUrl}"
-            .sheetName="${this.sheetName}"
-            .studentId="${this._user?.studentId || ''}"
-            .studentName="${this._user?.nama || ''}"
-            .studentNis="${this._user?.nis || ''}"
-            .studentAbsen="${this._user?.absen || ''}"
-            .studentKelas="${this._user?.kelas || ''}">
-          </activity-logger>
           <div class="tracker-grid" style="margin-top: var(--ddd-spacing-6);">
             <attendance-tracker></attendance-tracker>
             <engagement-score></engagement-score>
           </div>
           <div style="margin-top: var(--ddd-spacing-6);">
-            <transparent-gradebook></transparent-gradebook>
+            <transparent-gradebook
+              .appsScriptUrl="${this.appsScriptUrl}"
+              .studentId="${this._user?.studentId || ''}"
+              .studentName="${this._user?.nama || ''}">
+            </transparent-gradebook>
           </div>
         ` : html`
           <h2 style="color: var(--ddd-theme-primary);">${this.t.tabGuide}</h2>

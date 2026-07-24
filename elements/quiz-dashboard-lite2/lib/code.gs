@@ -32,6 +32,8 @@ function doGet(e) {
       case "summary": return response(getStudentSummary(name));
       case "pertemuan": return response(getPertemuanData(sheet));
       case "aktivitas": return response(getAktivitasLog(sheet, name));
+      case "getScores": return response(getStudentScores(studentId));
+      case "generateReport": return response(generateReport());
       case "list": 
       default: return response(getSheetList());
     }
@@ -62,6 +64,8 @@ function doPost(e) {
     if (data.action === "register") return response(registerUser(data));
     if (data.action === "login") return response(loginUser(data));
     if (data.action === "verify") return response(verifyUser(data.studentId || ""));
+    if (data.action === "getScores") return response(getStudentScores(data.studentId || ""));
+    if (data.action === "generateReport") return response(generateReport());
 
 // ✅ PERBAIKAN: Prioritaskan nama dari database jika studentId valid
 if (data.studentId) {
@@ -121,7 +125,7 @@ function saveQuiz(data) {
   const sheetName = data.sheet + " - Kuis";
   let sheet = ss.getSheetByName(sheetName);
   
-  const headers = ["Timestamp", "Nama", "Skor (%)", "Total Soal", "Status", "Student ID", "NIS", "Absen", "Kelas"];
+  const headers = ["Timestamp", "Nama", "Skor (%)", "Total Soal", "Status", "Student ID", "NIS", "Absen", "Kelas", "Kategori Kuis"];
   if (!sheet) {
     sheet = ss.insertSheet(sheetName);
     setupHeader(sheet, headers);
@@ -138,12 +142,13 @@ function saveQuiz(data) {
   const nis = String(data.nis || "").trim();
   const absen = String(data.absen || "").trim();
   const kelas = String(data.kelas || "").trim();
+  const quizCategory = String(data.quizCategory || data.category || "formatif").toLowerCase();
   const quizKey = studentId || [nis, absen, kelas, data.name].join("|");
 
   // Batasi 1 hasil kuis per siswa per pertemuan agar refresh/click URL exec tidak menggandakan baris.
   // Jika siswa mengerjakan ulang, baris lama diperbarui dengan hasil terbaru.
   const existingRow = findStudentRow_(sheet, quizKey, 5, [6, 7, 8, 1]);
-  const rowValues = [formattedTime, data.name, score, totalSoal, status, studentId, nis, absen, kelas];
+  const rowValues = [formattedTime, data.name, score, totalSoal, status, studentId, nis, absen, kelas, quizCategory];
   let targetRow;
   if (existingRow > 0) {
     targetRow = existingRow;
@@ -153,11 +158,11 @@ function saveQuiz(data) {
     targetRow = sheet.getLastRow();
   }
   
-  const range = sheet.getRange(targetRow, 1, 1, 9);
+  const range = sheet.getRange(targetRow, 1, 1, headers.length);
   range.setBackground(score >= 70 ? "#d1fae5" : "#fee2e2");
-  sheet.autoResizeColumns(1, 9);
+  sheet.autoResizeColumns(1, headers.length);
 
-  return { sheet: sheetName, row: targetRow, type: "quiz", name: data.name, score: score, status: status };
+  return { sheet: sheetName, row: targetRow, type: "quiz", name: data.name, score: score, status: status, category: quizCategory };
 }
 
 function countActivityForStudent_(sheet, studentId, nis, absen, kelas, name, activityType) {
@@ -256,17 +261,22 @@ function updateSummary() {
       const key = studentId || studentName;
 
       if (!studentStats[key]) {
-        studentStats[key] = { studentId: studentId, nis: String(row[isAktivitas ? 8 : 6] || ""), absen: String(row[isAktivitas ? 9 : 7] || ""), kelas: String(row[isAktivitas ? 10 : 8] || ""), nama: studentName, totalKuis: 0, totalScore: 0, highestScore: 0, lowestScore: 100, reading: 0, quizActivity: 0, discussion: 0, download: 0, totalActivity: 0, pertemuan: [], lastQuizStatus: "" };
+        studentStats[key] = { studentId: studentId, nis: String(row[isAktivitas ? 8 : 6] || ""), absen: String(row[isAktivitas ? 9 : 7] || ""), kelas: String(row[isAktivitas ? 10 : 8] || ""), nama: studentName, totalKuis: 0, totalScore: 0, highestScore: 0, lowestScore: 100, reading: 0, quizActivity: 0, discussion: 0, download: 0, assignment: 0, totalActivity: 0, pertemuan: [], lastQuizStatus: "", kuisFormatif: 0, kuisSumatif: 0, skorUts: 0, skorUas: 0 };
       }
 
       const s = studentStats[key];
       if (isKuis) {
         const score = parseInt(row[2]) || 0;
+        const category = String(row[9] || "formatif").toLowerCase();
         s.totalKuis++; s.totalScore += score;
         s.quizActivity++;
         if (score > s.highestScore) s.highestScore = score;
         if (score < s.lowestScore) s.lowestScore = score;
         s.lastQuizStatus = row[4] || "";
+        if (category === "formatif") s.kuisFormatif++;
+        else if (category === "sumatif" || category === "s") s.kuisSumatif++;
+        else if (category === "uts") s.skorUts = Math.max(s.skorUts, score);
+        else if (category === "uas") s.skorUas = Math.max(s.skorUas, score);
       }
       if (isAktivitas) {
         const type = row[4] || "activity";
@@ -275,6 +285,7 @@ function updateSummary() {
         else if (type === "quiz") s.quizActivity++;
         else if (type === "discussion") s.discussion++;
         else if (type === "download") s.download++;
+        else if (type === "assignment") s.assignment++;
       }
       if (!s.pertemuan.includes(pertemuanName)) s.pertemuan.push(pertemuanName);
     }
@@ -284,7 +295,7 @@ function updateSummary() {
   if (!summarySheet) { summarySheet = ss.insertSheet("Rangkuman"); }
   summarySheet.clear();
 
-  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Total Kuis", "Rata-rata Skor", "Skor Tertinggi", "Skor Terendah", "Total Aktivitas", "Reading", "Quiz Activity", "Discussion", "Download", "Jumlah Pertemuan", "Status Kuis Terakhir"];
+  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Total Kuis", "Rata-rata Skor", "Skor Tertinggi", "Skor Terendah", "Total Aktivitas", "Reading", "Quiz Activity", "Assignment", "Discussion", "Download", "Kuis Formatif", "Kuis Sumatif", "Skor UTS", "Skor UAS", "Jumlah Pertemuan", "Status Kuis Terakhir"];
   const hRange = summarySheet.getRange(1, 1, 1, headers.length);
   hRange.setValues([headers]);
   hRange.setFontWeight("bold");
@@ -298,7 +309,8 @@ function updateSummary() {
     summarySheet.getRange(rowNum, 1, 1, headers.length).setValues([[
       stats.studentId, stats.nis, stats.nama, stats.absen, stats.kelas,
       stats.totalKuis, avg, stats.highestScore, stats.lowestScore,
-      stats.totalActivity, stats.reading, stats.quizActivity, stats.discussion, stats.download,
+      stats.totalActivity, stats.reading, stats.quizActivity, stats.assignment, stats.discussion, stats.download,
+      stats.kuisFormatif, stats.kuisSumatif, stats.skorUts, stats.skorUas,
       stats.pertemuan.length, stats.lastQuizStatus || "N/A"
     ]]);
     
@@ -376,6 +388,134 @@ function getAktivitasLog(sheetName, studentName) {
     }
   }
   return { status: "ok", pertemuan: sheetName, aktivitas: result };
+}
+
+// --- FUNGSI NILAI AKUMULASI RAPOR ---
+
+function getStudentScores(studentId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const allSheets = ss.getSheets();
+  const result = {
+    studentId: studentId,
+    ulanganHarian: { highest: 0, all: [] },
+    uts: { highest: 0, all: [] },
+    uas: { highest: 0, all: [] },
+    formatif: { count: 0, all: [] }
+  };
+
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Rangkuman" || name === "Akumulasi Nilai Rapor" || name === "Users" || !name.includes(" - Kuis")) return;
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][5] || "").trim() !== studentId) continue;
+      const score = parseInt(data[i][2]) || 0;
+      const category = String(data[i][9] || "formatif").toLowerCase();
+      const pertemuan = name.replace(" - Kuis", "");
+      if (category === "ulangan_harian") {
+        result.ulanganHarian.all.push({ score, pertemuan });
+        if (score > result.ulanganHarian.highest) result.ulanganHarian.highest = score;
+      } else if (category === "uts") {
+        result.uts.all.push({ score, pertemuan });
+        if (score > result.uts.highest) result.uts.highest = score;
+      } else if (category === "uas") {
+        result.uas.all.push({ score, pertemuan });
+        if (score > result.uas.highest) result.uas.highest = score;
+      } else {
+        result.formatif.all.push({ score, pertemuan });
+        result.formatif.count++;
+      }
+    }
+  });
+
+  return { status: "ok", data: result };
+}
+
+function generateReport() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const allSheets = ss.getSheets();
+  const studentStats = {};
+
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Rangkuman" || name === "Akumulasi Nilai Rapor" || name === "Users" || sheet.getLastRow() <= 1) return;
+    if (!name.includes(" - Kuis") && !name.includes(" - Aktivitas")) return;
+    const isKuis = name.includes(" - Kuis");
+    const isAktivitas = name.includes(" - Aktivitas");
+    const pertemuanName = name.replace(" - Kuis", "").replace(" - Aktivitas", "");
+    const data = sheet.getDataRange().getValues();
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const studentName = String(row[isAktivitas ? 3 : 1] || "").trim();
+      const studentId = String(row[isAktivitas ? 7 : 5] || "").trim();
+      if (!studentName) continue;
+      const key = studentId || studentName;
+
+      if (!studentStats[key]) {
+        studentStats[key] = {
+          studentId: studentId,
+          nis: String(row[isAktivitas ? 8 : 6] || ""),
+          absen: String(row[isAktivitas ? 9 : 7] || ""),
+          kelas: String(row[isAktivitas ? 10 : 8] || ""),
+          nama: studentName,
+          pertemuanActivities: {},
+          highestUH: 0,
+          highestUTS: 0,
+          highestUAS: 0
+        };
+      }
+
+      const s = studentStats[key];
+      if (isKuis) {
+        const score = parseInt(row[2]) || 0;
+        const category = String(row[9] || "formatif").toLowerCase();
+        if (category === "ulangan_harian" && score > s.highestUH) s.highestUH = score;
+        else if (category === "uts" && score > s.highestUTS) s.highestUTS = score;
+        else if (category === "uas" && score > s.highestUAS) s.highestUAS = score;
+      }
+      if (isAktivitas) {
+        if (!s.pertemuanActivities[pertemuanName]) s.pertemuanActivities[pertemuanName] = 0;
+        s.pertemuanActivities[pertemuanName]++;
+      }
+    }
+  });
+
+  let reportSheet = ss.getSheetByName("Akumulasi Nilai Rapor");
+  if (reportSheet) reportSheet.clear();
+  else reportSheet = ss.insertSheet("Akumulasi Nilai Rapor");
+
+  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Jumlah Pertemuan", "Rata Aktivitas/Pertemuan", "Kehadiran (skala 100)", "Skor UH Tertinggi", "Skor UTS", "Skor UAS", "Nilai Akhir", "Grade"];
+  const hRange = reportSheet.getRange(1, 1, 1, headers.length);
+  hRange.setValues([headers]);
+  hRange.setFontWeight("bold");
+  hRange.setBackground("#6750a4");
+  hRange.setFontColor("white");
+  hRange.setHorizontalAlignment("center");
+
+  let rowNum = 2;
+  Object.values(studentStats).forEach(s => {
+    const pertemuanCount = Object.keys(s.pertemuanActivities).length;
+    const totalActivities = Object.values(s.pertemuanActivities).reduce((a, b) => a + b, 0);
+    const avgPerPertemuan = pertemuanCount > 0 ? Math.round(totalActivities / pertemuanCount) : 0;
+    const kehadiran = Math.min(avgPerPertemuan * 10, 100);
+    const uh = s.highestUH;
+    const uts = s.highestUTS;
+    const uas = s.highestUAS;
+    const total = (kehadiran * 1/8) + (uh * 3/8) + (uts * 2/8) + (uas * 2/8);
+    const finalScore = Math.round(total * 10) / 10;
+    const grade = finalScore >= 85 ? "A" : finalScore >= 75 ? "B+" : finalScore >= 65 ? "B" : finalScore >= 55 ? "C+" : finalScore >= 45 ? "C" : finalScore >= 35 ? "D" : "E";
+
+    reportSheet.getRange(rowNum, 1, 1, headers.length).setValues([[
+      s.studentId, s.nis, s.nama, s.absen, s.kelas,
+      pertemuanCount, avgPerPertemuan, kehadiran,
+      uh, uts, uas, finalScore, grade
+    ]]);
+    rowNum++;
+  });
+
+  reportSheet.autoResizeColumns(1, headers.length);
+  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2 };
 }
 
 function response(obj) {

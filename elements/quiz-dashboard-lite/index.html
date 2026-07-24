@@ -5,7 +5,7 @@
   <base href="/">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="Description" content="Demonstration for quiz-dashboard-lite2">
+  <meta name="Description" content="Demonstration for quiz-dashboard-lite">
 
   <style>
     :root, html, body {
@@ -15,50 +15,35 @@
     #demo {
       margin: var(--ddd-spacing-2);
     }
-    quiz-dashboard-lite2 {
+    quiz-dashboard-lite {
       margin: var(--ddd-spacing-2);
       border: var(--ddd-border-md);
       border-radius: var(--ddd-radius-lg);
     }
-    quiz-dashboard-lite2:hover {
+    quiz-dashboard-lite:hover {
       box-shadow: var(--ddd-boxShadow-sm);
     }
     #example {
-      --quiz-dashboard-lite2-font-size: var(--ddd-font-size-l);
+      --quiz-dashboard-lite-font-size: var(--ddd-font-size-l);
       background-color: var(--ddd-accent-2);
       color: var(--ddd-primary-17);
     }
   </style>
-  <title>quiz-dashboard-lite2</title>
+  <title>quiz-dashboard-lite</title>
 </head>
 
 <body>
-
-    <quiz-dashboard-lite2 
-    apps-script-url="https://script.google.com/macros/s/AKfycbzidCNqEpXqeoWLevC7fqB9vN0-0H6y4EFIKyewXtXZEcDbsSdboO2uizDL98gDjnfZ2A/exec" 
-    sheet-name="Pertemuan 2">
-  </quiz-dashboard-lite2>
-  
   <div id="demo">
     <h1>quiz-dashboard-lite</h1>
     <!-- this is going to do whatever the tag's defaults are -->
     <h2>Default</h2>
-    <quiz-dashboard-lite2     apps-script-url="https://script.google.com/macros/s/AKfycbzL_idQAG6fgK249zTFmm0EkwhhC2skH_DFsciPg7wQfaH1RLugyDDJ8jhLYTOTEVOlOQ/exec" 
-    sheet-name="Pertemuan 3"></quiz-dashboard-lite2>
-
-
+    <quiz-dashboard-lite></quiz-dashboard-lite>
     <h2>Slot usage</h2>
-
-      <quiz-dashboard-lite2  data-accent="2" data-primary="17"   apps-script-url="https://script.google.com/macros/s/AKfycbzL_idQAG6fgK249zTFmm0EkwhhC2skH_DFsciPg7wQfaH1RLugyDDJ8jhLYTOTEVOlOQ/exec" 
-    sheet-name="Pertemuan 4"><div>Contoh isi slot content</div></quiz-dashboard-lite2>
-
-
-
-
+    <quiz-dashboard-lite data-accent="2" data-primary="17"><div>Sample slot content</div></quiz-dashboard-lite>
     <h2>Property usage</h2>
-    <quiz-dashboard-lite2 id="example" title="Sample property title"></quiz-dashboard-lite2>
+    <quiz-dashboard-lite id="example" title="Sample property title"></quiz-dashboard-lite>
   </div>
-  <script type="module" src="./quiz-dashboard-lite2.js"></script>
+  <script type="module" src="./quiz-dashboard-lite.js"></script>
 
   <!-- Take HAX, the Web and you further down the rabbit hole -->
   <style>
@@ -104,7 +89,7 @@
       </p>
       <p>
         You can edit the current page by modifying <code>index.html</code><br />
-        To edit your <strong>quiz-dashboard-lite2</strong> tag, modify <code>src/quiz-dashboard-lite2.js</code>.
+        To edit your <strong>quiz-dashboard-lite</strong> tag, modify <code>src/quiz-dashboard-lite.js</code>.
         This file contains all the HTML, CSS and JavaScript used to render your elements above!
       </p>
       <p>

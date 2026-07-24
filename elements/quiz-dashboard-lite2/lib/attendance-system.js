@@ -124,11 +124,11 @@ function getInitialLogs() {
 
 // Global threshold default config
 const DEFAULT_THRESHOLDS = {
-  minWeeklyActivities: 8,
+  minWeeklyActivities: 10,
   minReading: 5,
   minQuiz: 1,
-  minDiscussion: 1,
-  minDownload: 1
+  minAssignment: 1,
+  minDiscussion: 1
 };
 
 function getThresholds() {
@@ -137,14 +137,15 @@ function getThresholds() {
   return { ...DEFAULT_THRESHOLDS, ...parsed, minReading: Math.max(parsed.minReading || 0, DEFAULT_THRESHOLDS.minReading) };
 }
 
-// Global grades config defaults
+// Global grades config defaults — Bobot: Kehadiran(1) : Ulangan Harian(3) : UTS(2) : UAS(2) = Total 8
 const DEFAULT_GRADES = {
-  uts: 85,
-  uas: 88,
-  attendanceWeight: 30,
-  quizWeight: 20,
-  utsWeight: 25,
-  uasWeight: 25
+  attendanceWeight: 1,
+  ulanganHarianWeight: 3,
+  utsWeight: 2,
+  uasWeight: 2,
+  totalWeight: 8,
+  uts: 0,
+  uas: 0
 };
 
 function getGradesConfig() {
@@ -195,6 +196,7 @@ export class ActivityLogger extends LitElement {
     this._handleClick = this._handleClick.bind(this);
     this._handleQuizSaved = this._handleQuizSaved.bind(this);
     this._handleDiscussionSaved = this._handleDiscussionSaved.bind(this);
+    this._handleAssignmentSaved = this._handleAssignmentSaved.bind(this);
     this._lastScrollTime = 0;
   }
 
@@ -204,6 +206,7 @@ export class ActivityLogger extends LitElement {
     window.addEventListener("click", this._handleClick);
     window.addEventListener("quiz-saved", this._handleQuizSaved);
     window.addEventListener("discussion-saved", this._handleDiscussionSaved);
+    window.addEventListener("assignment-saved", this._handleAssignmentSaved);
     window.addEventListener("a3-force-reload", () => {
       this._logs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
     });
@@ -214,6 +217,7 @@ export class ActivityLogger extends LitElement {
     window.removeEventListener("click", this._handleClick);
     window.removeEventListener("quiz-saved", this._handleQuizSaved);
     window.removeEventListener("discussion-saved", this._handleDiscussionSaved);
+    window.removeEventListener("assignment-saved", this._handleAssignmentSaved);
     super.disconnectedCallback();
   }
 
@@ -259,7 +263,13 @@ export class ActivityLogger extends LitElement {
 
   _handleDiscussionSaved(e) {
     const thread = e.detail?.thread || e.detail?.title || "Umum";
-    this.logActivity("discussion", `Aktif berdiskusi pada forum: ${thread}`);
+    this.logActivity("discussion", `Aktif berdiskusi pada forum/chat: ${thread}`);
+  }
+
+  _handleAssignmentSaved(e) {
+    const title = e.detail?.title || e.detail?.assignment || "Tugas";
+    const category = e.detail?.category || "mandiri/terstruktur";
+    this.logActivity("assignment", `Mengumpulkan tugas ${category}: ${title}`);
   }
 
   logActivity(type, description) {
@@ -342,6 +352,11 @@ export class ActivityLogger extends LitElement {
         "Memberikan komentar di forum kelas",
         "Membuat thread diskusi baru mengenai Lit Element",
         "Menjawab pertanyaan teman di chat pembelajaran"
+      ],
+      assignment: [
+        "Mengumpulkan tugas mandiri: Ringkasan materi",
+        "Mengumpulkan tugas terstruktur: Latihan integrasi data",
+        "Menyelesaikan lembar kerja peserta didik"
       ]
     };
 
@@ -530,6 +545,7 @@ export class ActivityLogger extends LitElement {
       .log-item.download { border-left-color: #10b981; }
       .log-item.discussion { border-left-color: #f59e0b; }
       .log-item.quiz { border-left-color: #ec4899; }
+      .log-item.assignment { border-left-color: #8b5cf6; }
 
       .log-time {
         font-size: 10px;
@@ -610,8 +626,9 @@ export class ActivityLogger extends LitElement {
               <div class="sim-title">Uji Coba Simulator (Sinyal Aktivitas)</div>
               <div class="sim-buttons">
                 <button class="sim-btn" @click="${() => this._simulateActivity('reading')}">📖 Baca Modul</button>
+                <button class="sim-btn" @click="${() => this._simulateActivity('assignment')}">📌 Tugas</button>
+                <button class="sim-btn" @click="${() => this._simulateActivity('discussion')}">💬 Forum/Chat</button>
                 <button class="sim-btn" @click="${() => this._simulateActivity('download')}">📥 Unduh PDF</button>
-                <button class="sim-btn" @click="${() => this._simulateActivity('discussion')}">💬 Chat Diskusi</button>
               </div>
             </div>
 
@@ -692,20 +709,20 @@ export class AttendanceTracker extends LitElement {
 
     const counts = {
       reading: weekLogs.filter(l => l.type === "reading").length,
-      download: weekLogs.filter(l => l.type === "download").length,
       discussion: weekLogs.filter(l => l.type === "discussion").length,
       quiz: weekLogs.filter(l => l.type === "quiz").length,
+      assignment: weekLogs.filter(l => l.type === "assignment").length,
       total: weekLogs.length
     };
 
-    // Kriteria 100% hadir: 5 reading + 1 quiz + 1 diskusi + 1 unduh + total aktivitas terpenuhi.
+    // Kriteria 100% hadir: kuis formatif + tugas + baca + forum/chat + minimal 10 aktivitas.
     const readingMet = counts.reading >= this._thresholds.minReading;
     const quizMet = counts.quiz >= this._thresholds.minQuiz;
+    const assignmentMet = counts.assignment >= this._thresholds.minAssignment;
     const discussionMet = counts.discussion >= this._thresholds.minDiscussion;
-    const downloadMet = counts.download >= this._thresholds.minDownload;
     const totalMet = counts.total >= this._thresholds.minWeeklyActivities;
 
-    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (downloadMet ? 1 : 0) + (totalMet ? 1 : 0);
+    const criteriaCount = (quizMet ? 1 : 0) + (assignmentMet ? 1 : 0) + (readingMet ? 1 : 0) + (discussionMet ? 1 : 0) + (totalMet ? 1 : 0);
     const attendancePercentage = Math.round((criteriaCount / 5) * 100);
 
     return {
@@ -713,8 +730,8 @@ export class AttendanceTracker extends LitElement {
       goals: {
         reading: readingMet,
         quiz: quizMet,
+        assignment: assignmentMet,
         discussion: discussionMet,
-        download: downloadMet,
         total: totalMet
       },
       attendancePercentage,
@@ -957,12 +974,26 @@ export class AttendanceTracker extends LitElement {
                 <div class="crit-info">
                   <div class="icon">📝</div>
                   <div>
-                    <div class="crit-name">Penyelesaian Kuis Eksplorasi</div>
+                    <div class="crit-name">Kuis Eksplorasi / Formatif</div>
                     <div class="crit-progress">Tercapai: ${stats.counts.quiz} dari min. ${this._thresholds.minQuiz} kuis</div>
                   </div>
                 </div>
                 <div class="status-indicator ${stats.goals.quiz ? 'check' : 'cross'}">
                   ${stats.goals.quiz ? "✅" : "⏳"}
+                </div>
+              </div>
+
+              <!-- Assignment activity -->
+              <div class="criteria-item">
+                <div class="crit-info">
+                  <div class="icon">📌</div>
+                  <div>
+                    <div class="crit-name">Tugas Mandiri / Terstruktur</div>
+                    <div class="crit-progress">Tercapai: ${stats.counts.assignment} dari min. ${this._thresholds.minAssignment} tugas</div>
+                  </div>
+                </div>
+                <div class="status-indicator ${stats.goals.assignment ? 'check' : 'cross'}">
+                  ${stats.goals.assignment ? "✅" : "⏳"}
                 </div>
               </div>
 
@@ -1394,21 +1425,29 @@ export class TransparentGradebook extends LitElement {
 
   static get properties() {
     return {
+      appsScriptUrl: { type: String, attribute: "apps-script-url" },
+      studentId: { type: String, attribute: "student-id" },
+      studentName: { type: String, attribute: "student-name" },
       _logs: { type: Array },
       _thresholds: { type: Object },
       _gradesConfig: { type: Object },
       _isLecturerMode: { type: Boolean },
-      _savedQuizScore: { type: Number }
+      _scores: { type: Object },
+      _reportStatus: { type: String }
     };
   }
 
   constructor() {
     super();
+    this.appsScriptUrl = "";
+    this.studentId = "";
+    this.studentName = "";
     this._logs = getInitialLogs();
     this._thresholds = getThresholds();
     this._gradesConfig = getGradesConfig();
     this._isLecturerMode = false;
-    this._savedQuizScore = 0;
+    this._scores = { ulanganHarian: { highest: 0 }, uts: { highest: 0 }, uas: { highest: 0 }, formatif: { count: 0 } };
+    this._reportStatus = "";
   }
 
   connectedCallback() {
@@ -1417,11 +1456,11 @@ export class TransparentGradebook extends LitElement {
       this._logs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
       this._thresholds = getThresholds();
       this._gradesConfig = getGradesConfig();
-      this._loadActualQuizScore();
+      this._fetchScores();
     };
     window.addEventListener("a3-activity-logged", this._reloadHandler);
     window.addEventListener("a3-force-reload", this._reloadHandler);
-    this._loadActualQuizScore();
+    this._fetchScores();
   }
 
   disconnectedCallback() {
@@ -1430,42 +1469,58 @@ export class TransparentGradebook extends LitElement {
     super.disconnectedCallback();
   }
 
-  _loadActualQuizScore() {
-    // Look into logs to find the highest quiz score
-    const quizLogs = this._logs.filter(l => l.type === "quiz");
-    if (quizLogs.length > 0) {
-      const scores = quizLogs.map(l => {
-        const match = l.description.match(/Skor diperoleh:\s*(\d+)%/i) || l.description.match(/Skor\s*(\d+)%/i);
-        return match ? parseInt(match[1]) : 0;
-      });
-      this._savedQuizScore = Math.max(...scores, 0);
-    } else {
-      // Fallback: check if we have any other scoreboard or set default 0
-      this._savedQuizScore = 0;
+  _fetchScores() {
+    if (!this.appsScriptUrl || !this.studentId) {
+      this._scores = { ulanganHarian: { highest: 0 }, uts: { highest: 0 }, uas: { highest: 0 }, formatif: { count: 0 } };
+      return;
     }
+    const url = `${this.appsScriptUrl}?action=getScores&studentId=${encodeURIComponent(this.studentId)}`;
+    fetch(url, { redirect: "follow" })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok" && data.data) this._scores = data.data;
+      })
+      .catch(() => {
+        this._scores = { ulanganHarian: { highest: 0 }, uts: { highest: 0 }, uas: { highest: 0 }, formatif: { count: 0 } };
+      });
+  }
+
+  _generateReport() {
+    if (!this.appsScriptUrl) return;
+    this._reportStatus = "Generating...";
+    const url = `${this.appsScriptUrl}?action=generateReport`;
+    fetch(url, { redirect: "follow" })
+      .then(r => r.json())
+      .then(data => {
+        this._reportStatus = data.status === "ok" ? `${data.message} (${data.totalSiswa} siswa)` : "Gagal generate";
+        setTimeout(() => { this._reportStatus = ""; }, 6000);
+      })
+      .catch(() => {
+        this._reportStatus = "Gagal menghubungi server";
+        setTimeout(() => { this._reportStatus = ""; }, 6000);
+      });
   }
 
   _getAttendanceScore() {
-    // Real attendance: compute from actual local activity logs only, no hardcoded demo weeks.
     const now = new Date();
     const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const weekLogs = this._logs.filter(log => new Date(log.timestamp) >= oneWeekAgo);
 
     const counts = {
       reading: Math.min(weekLogs.filter(l => l.type === "reading").length, this._thresholds.minReading),
-      download: weekLogs.filter(l => l.type === "download").length,
       discussion: weekLogs.filter(l => l.type === "discussion").length,
       quiz: weekLogs.filter(l => l.type === "quiz").length,
+      assignment: weekLogs.filter(l => l.type === "assignment").length,
       total: weekLogs.length
     };
 
     const readingMet = counts.reading >= this._thresholds.minReading;
     const quizMet = counts.quiz >= this._thresholds.minQuiz;
+    const assignmentMet = counts.assignment >= this._thresholds.minAssignment;
     const discussionMet = counts.discussion >= this._thresholds.minDiscussion;
-    const downloadMet = counts.download >= this._thresholds.minDownload;
     const totalMet = counts.total >= this._thresholds.minWeeklyActivities;
 
-    const criteriaCount = (readingMet ? 1 : 0) + (quizMet ? 1 : 0) + (discussionMet ? 1 : 0) + (downloadMet ? 1 : 0) + (totalMet ? 1 : 0);
+    const criteriaCount = (quizMet ? 1 : 0) + (assignmentMet ? 1 : 0) + (readingMet ? 1 : 0) + (discussionMet ? 1 : 0) + (totalMet ? 1 : 0);
     const currentWeekAttendanceScore = Math.round((criteriaCount / 5) * 100);
 
     return {
@@ -1475,17 +1530,18 @@ export class TransparentGradebook extends LitElement {
   }
 
   _getFinalScore() {
+    const tw = this._gradesConfig.totalWeight || 8;
     const attScore = this._getAttendanceScore().overall;
-    const quizScore = this._savedQuizScore || 0;
-    const uts = this._gradesConfig.uts;
-    const uas = this._gradesConfig.uas;
+    const uhScore = this._scores.ulanganHarian?.highest || 0;
+    const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
+    const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
 
-    const wAtt = this._gradesConfig.attendanceWeight / 100;
-    const wQuiz = this._gradesConfig.quizWeight / 100;
-    const wUts = this._gradesConfig.utsWeight / 100;
-    const wUas = this._gradesConfig.uasWeight / 100;
+    const wAtt = (this._gradesConfig.attendanceWeight || 1) / tw;
+    const wUH = (this._gradesConfig.ulanganHarianWeight || 3) / tw;
+    const wUts = (this._gradesConfig.utsWeight || 2) / tw;
+    const wUas = (this._gradesConfig.uasWeight || 2) / tw;
 
-    const final = (attScore * wAtt) + (quizScore * wQuiz) + (uts * wUts) + (uas * wUas);
+    const final = (attScore * wAtt) + (uhScore * wUH) + (utsScore * wUts) + (uasScore * wUas);
     return Math.round(final * 10) / 10;
   }
 
@@ -1746,11 +1802,14 @@ export class TransparentGradebook extends LitElement {
 
   render() {
     const attendanceStats = this._getAttendanceScore();
-    const quizScore = this._savedQuizScore;
+    const uhScore = this._scores.ulanganHarian?.highest || 0;
+    const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
+    const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
     const finalScore = this._getFinalScore();
     const gradeLetter = this._getGradeLetter(finalScore);
+    const tw = this._gradesConfig.totalWeight || 8;
+    const uhCount = this._scores.formatif?.count || 0;
 
-    // Mock students for the Lecturer console roster
     const mockStudents = [
       { name: "Ahmad Dahlan", active: "Sangat Aktif", activities: 28, score: 92 },
       { name: "Siti Rahma", active: "Konsisten", activities: 19, score: 86 },
@@ -1762,28 +1821,37 @@ export class TransparentGradebook extends LitElement {
       <div class="grade-card">
         <div class="card-header">
           <h3>📖 Transparansi Nilai & Hasil Belajar</h3>
-          <button class="toggle-btn" @click="${() => this._isLecturerMode = !this._isLecturerMode}">
-            ⚙️ ${this._isLecturerMode ? "Kembali ke View Mahasiswa" : "Masuk Mode Dosen (Console)"}
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span style="font-size: 11px; color: #888;">Bobot: Kehadiran(${this._gradesConfig.attendanceWeight}) : UH(${this._gradesConfig.ulanganHarianWeight}) : UTS(${this._gradesConfig.utsWeight}) : UAS(${this._gradesConfig.uasWeight}) = ${tw}</span>
+            <button class="toggle-btn" @click="${() => this._isLecturerMode = !this._isLecturerMode}">
+              ⚙️ ${this._isLecturerMode ? "Kembali ke View Mahasiswa" : "Masuk Mode Dosen (Console)"}
+            </button>
+          </div>
         </div>
 
         <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
-          Seluruh poin penilaian terakumulasi secara transparan dari aktivitas sistem yang Anda jalankan secara asinkronus dan real-time.
+          Bobot penilaian: <strong>Kehadiran(${this._gradesConfig.attendanceWeight}/${tw})</strong> + <strong>Ulangan Harian(${this._gradesConfig.ulanganHarianWeight}/${tw})</strong> + <strong>UTS(${this._gradesConfig.utsWeight}/${tw})</strong> + <strong>UAS(${this._gradesConfig.uasWeight}/${tw})</strong>. Kuis formatif hanya syarat hadir, tidak masuk akumulasi.
         </p>
+
+        ${this._reportStatus ? html`<div class="msg msg-success">${this._reportStatus}</div>` : ""}
 
         <!-- Bento summary blocks -->
         <div class="summary-grid">
           <div class="summary-item">
-            <span class="summary-label">Rata Kehadiran</span>
+            <span class="summary-label">Rata Kehadiran (${this._gradesConfig.attendanceWeight}/${tw})</span>
             <span class="summary-val">${attendanceStats.overall}%</span>
           </div>
           <div class="summary-item">
-            <span class="summary-label">Skor Kuis Explode</span>
-            <span class="summary-val">${quizScore}%</span>
+            <span class="summary-label">Skor Ulangan Harian (${this._gradesConfig.ulanganHarianWeight}/${tw})</span>
+            <span class="summary-val">${uhScore}%</span>
           </div>
           <div class="summary-item">
-            <span class="summary-label">UTS & UAS</span>
-            <span class="summary-val">${Math.round((this._gradesConfig.uts + this._gradesConfig.uas) / 2)}%</span>
+            <span class="summary-label">Skor UTS (${this._gradesConfig.utsWeight}/${tw})</span>
+            <span class="summary-val">${utsScore > 0 ? utsScore + '%' : '—'}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Skor UAS (${this._gradesConfig.uasWeight}/${tw})</span>
+            <span class="summary-val">${uasScore > 0 ? uasScore + '%' : '—'}</span>
           </div>
           <div class="summary-item highlight">
             <span class="summary-label">Nilai Akhir</span>
@@ -1801,7 +1869,7 @@ export class TransparentGradebook extends LitElement {
             <thead>
               <tr>
                 <th>Komponen Nilai</th>
-                <th>Sub-Komponen & Keterangan</th>
+                <th>Sumber</th>
                 <th>Bobot</th>
                 <th>Nilai Maks</th>
                 <th>Nilai Diperoleh</th>
@@ -1810,69 +1878,52 @@ export class TransparentGradebook extends LitElement {
             <tbody>
               <!-- Kehadiran -->
               <tr>
-                <td class="row-category" rowspan="4">Kehadiran & Partisipasi (${this._gradesConfig.attendanceWeight}%)</td>
-                <td>Kehadiran Pekan 1 (Seed Data)</td>
-                <td rowspan="4" style="text-align: center; vertical-align: middle; font-weight: bold;">
-                  ${this._gradesConfig.attendanceWeight}%
-                </td>
-                <td>100</td>
-                <td>100</td>
-              </tr>
-              <tr>
-                <td>Kehadiran Pekan 2 (Seed Data)</td>
-                <td>100</td>
-                <td>100</td>
-              </tr>
-              <tr>
-                <td>Kehadiran Pekan 3 (Seed Data)</td>
-                <td>100</td>
-                <td>100</td>
-              </tr>
-              <tr>
-                <td>Kehadiran Pekan 4 (Pekan Berjalan - Realtime)</td>
+                <td class="row-category">Kehadiran (${this._gradesConfig.attendanceWeight}/${tw})</td>
+                <td>Rata-rata kehadiran mingguan dari aktivitas (min 5 baca, 1 kuis, 1 tugas, 1 diskusi, 10 total)</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.attendanceWeight / tw) * 100)}%</td>
                 <td>100</td>
                 <td style="font-weight: bold; color: ${attendanceStats.currentWeek >= 75 ? '#059669' : '#d97706'}">
-                  ${attendanceStats.currentWeek}
+                  ${attendanceStats.overall}
                 </td>
               </tr>
 
-              <!-- Kuis -->
+              <!-- Ulangan Harian -->
               <tr>
-                <td class="row-category">Kuis Eksplorasi (${this._gradesConfig.quizWeight}%)</td>
-                <td>Skor Tertinggi Kuis Explode (Terintegrasi Real-time)</td>
-                <td style="text-align: center; font-weight: bold;">${this._gradesConfig.quizWeight}%</td>
+                <td class="row-category">Ulangan Harian (${this._gradesConfig.ulanganHarianWeight}/${tw})</td>
+                <td>Skor tertinggi quiz kategori <code>ulangan_harian</code> (${uhCount} kuis dikerjakan)</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.ulanganHarianWeight / tw) * 100)}%</td>
                 <td>100</td>
-                <td style="font-weight: bold; color: #6750a4;">${quizScore}</td>
+                <td style="font-weight: bold; color: #6750a4;">${uhScore}</td>
               </tr>
 
               <!-- UTS -->
               <tr>
-                <td class="row-category">UTS (${this._gradesConfig.utsWeight}%)</td>
-                <td>Ujian Tengah Semester (Simulasi di Input Dosen)</td>
-                <td style="text-align: center; font-weight: bold;">${this._gradesConfig.utsWeight}%</td>
+                <td class="row-category">UTS (${this._gradesConfig.utsWeight}/${tw})</td>
+                <td>Ujian Tengah Semester — dari quiz <code>category="uts"</code> atau input manual dosen</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.utsWeight / tw) * 100)}%</td>
                 <td>100</td>
                 <td>
                   ${this._isLecturerMode ? html`
                     <input type="number" id="uts" class="config-input" style="width: 70px; padding: 4px;"
                            .value="${this._gradesConfig.uts}" @change="${this._updateGradesConfig}">
                   ` : html`
-                    ${this._gradesConfig.uts}
+                    <span style="font-weight: bold; color: ${utsScore > 0 ? '#059669' : '#999'};">${utsScore > 0 ? utsScore : '—'}</span>
                   `}
                 </td>
               </tr>
 
               <!-- UAS -->
               <tr>
-                <td class="row-category">UAS (${this._gradesConfig.uasWeight}%)</td>
-                <td>Ujian Akhir Semester (Simulasi di Input Dosen)</td>
-                <td style="text-align: center; font-weight: bold;">${this._gradesConfig.uasWeight}%</td>
+                <td class="row-category">UAS (${this._gradesConfig.uasWeight}/${tw})</td>
+                <td>Ujian Akhir Semester — dari quiz <code>category="uas"</code> atau input manual dosen</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.uasWeight / tw) * 100)}%</td>
                 <td>100</td>
                 <td>
                   ${this._isLecturerMode ? html`
                     <input type="number" id="uas" class="config-input" style="width: 70px; padding: 4px;"
                            .value="${this._gradesConfig.uas}" @change="${this._updateGradesConfig}">
                   ` : html`
-                    ${this._gradesConfig.uas}
+                    <span style="font-weight: bold; color: ${uasScore > 0 ? '#059669' : '#999'};">${uasScore > 0 ? uasScore : '—'}</span>
                   `}
                 </td>
               </tr>
@@ -1884,51 +1935,42 @@ export class TransparentGradebook extends LitElement {
         ${this._isLecturerMode ? html`
           <div class="lecturer-panel">
             <div class="lecturer-panel-title">
-              ⚙️ Pengaturan Console Dosen & Kriteria Kelulusan
+              ⚙️ Konfigurasi Dosen & Generate Laporan
             </div>
 
-            <!-- Parameters config -->
             <div class="config-grid">
               <div class="config-group">
-                <span class="config-label">Min. Akumulasi Aktivitas Pekanan</span>
-                <input type="number" id="minWeeklyActivities" class="config-input"
-                       .value="${this._thresholds.minWeeklyActivities}" @change="${this._updateThresholdConfig}">
-              </div>
-              <div class="config-group">
-                <span class="config-label">Min. Membaca Modul (Pekan)</span>
-                <input type="number" id="minReading" class="config-input"
-                       .value="${this._thresholds.minReading}" @change="${this._updateThresholdConfig}">
-              </div>
-              <div class="config-group">
-                <span class="config-label">Min. Partisipasi Forum (Pekan)</span>
-                <input type="number" id="minDiscussion" class="config-input"
-                       .value="${this._thresholds.minDiscussion}" @change="${this._updateThresholdConfig}">
-              </div>
-              <div class="config-group">
-                <span class="config-label">Bobot Kehadiran (%)</span>
+                <span class="config-label">Bobot Kehadiran (${this._gradesConfig.attendanceWeight}/${tw})</span>
                 <input type="number" id="attendanceWeight" class="config-input"
                        .value="${this._gradesConfig.attendanceWeight}" @change="${this._updateGradesConfig}">
               </div>
               <div class="config-group">
-                <span class="config-label">Bobot Kuis (%)</span>
-                <input type="number" id="quizWeight" class="config-input"
-                       .value="${this._gradesConfig.quizWeight}" @change="${this._updateGradesConfig}">
+                <span class="config-label">Bobot Ulangan Harian (${this._gradesConfig.ulanganHarianWeight}/${tw})</span>
+                <input type="number" id="ulanganHarianWeight" class="config-input"
+                       .value="${this._gradesConfig.ulanganHarianWeight}" @change="${this._updateGradesConfig}">
               </div>
               <div class="config-group">
-                <span class="config-label">Bobot UTS & UAS (%)</span>
-                <div style="display: flex; gap: 8px;">
-                  <input type="number" id="utsWeight" class="config-input" style="width: 50%" placeholder="UTS"
-                         .value="${this._gradesConfig.utsWeight}" @change="${this._updateGradesConfig}">
-                  <input type="number" id="uasWeight" class="config-input" style="width: 50%" placeholder="UAS"
-                         .value="${this._gradesConfig.uasWeight}" @change="${this._updateGradesConfig}">
-                </div>
+                <span class="config-label">Bobot UTS (${this._gradesConfig.utsWeight}/${tw})</span>
+                <input type="number" id="utsWeight" class="config-input"
+                       .value="${this._gradesConfig.utsWeight}" @change="${this._updateGradesConfig}">
+              </div>
+              <div class="config-group">
+                <span class="config-label">Bobot UAS (${this._gradesConfig.uasWeight}/${tw})</span>
+                <input type="number" id="uasWeight" class="config-input"
+                       .value="${this._gradesConfig.uasWeight}" @change="${this._updateGradesConfig}">
               </div>
             </div>
 
-            <!-- Roster diagnostik -->
+            <div style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">
+              <button class="toggle-btn" @click="${this._generateReport}">
+                📥 Generate Laporan Rapor
+              </button>
+              <span style="font-size: 11px; color: #888;">Membuat sheet "Akumulasi Nilai Rapor" di Google Sheets</span>
+            </div>
+
             <div class="simulated-roster-section">
-              <div style="font-size: 12px; font-weight: bold; color: #6750a4; margin-bottom: 8px;">
-                Diagnostik Realtime Anggota Kelas (Simulasi Anggota Kelas Dosen)
+              <div style="font-size: 12px; font-weight: bold; color: #6750a4; margin: 16px 0 8px;">
+                Diagnostik Realtime Anggota Kelas (Simulasi)
               </div>
               <div class="table-wrapper">
                 <table style="font-size: 12px;">
@@ -1936,13 +1978,11 @@ export class TransparentGradebook extends LitElement {
                     <tr>
                       <th>Nama Mahasiswa</th>
                       <th>Status Aktivitas</th>
-                      <th>Log Aktivitas (Pekan)</th>
-                      <th>Grafik Performa</th>
+                      <th>Log Aktivitas</th>
                       <th>Nilai Akhir Estimasi</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- Student Roster -->
                     ${mockStudents.map(student => html`
                       <tr>
                         <td style="font-weight: 500;">${student.name}</td>
@@ -1953,32 +1993,10 @@ export class TransparentGradebook extends LitElement {
                             ${student.active}
                           </span>
                         </td>
-                        <td>${student.activities} log</td>
-                        <td>
-                          <div class="progress-bar-container">
-                            <div class="progress-bar" style="width: ${Math.min(student.activities * 3.5, 100)}%;"></div>
-                          </div>
-                        </td>
-                        <td style="font-weight: bold; color: #6750a4;">${student.score} (${this._getGradeLetter(student.score)})</td>
+                        <td>${student.activities} aktivitas</td>
+                        <td style="font-weight: bold; color: #6750a4;">${student.score}</td>
                       </tr>
                     `)}
-                    <!-- Current User dynamic row -->
-                    <tr style="background-color: #f3f0fa;">
-                      <td style="font-weight: bold;">Anda (Siswa Aktif)</td>
-                      <td>
-                        <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold;
-                                     background-color: #d1fae5; color: #065f46;">
-                          Aktif Real-time
-                        </span>
-                      </td>
-                      <td>${this._logs.filter(l => new Date(l.timestamp) >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length} log</td>
-                      <td>
-                        <div class="progress-bar-container">
-                          <div class="progress-bar" style="width: ${Math.min(this._logs.length * 2, 100)}%; background-color: #10b981;"></div>
-                        </div>
-                      </td>
-                      <td style="font-weight: bold; color: #10b981;">${finalScore} (${gradeLetter})</td>
-                    </tr>
                   </tbody>
                 </table>
               </div>
