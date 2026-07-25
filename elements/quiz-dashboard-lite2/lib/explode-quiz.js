@@ -48,6 +48,19 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
               "Nama fungsi Google Apps Script untuk menerima hasil kuis",
             inputMethod: "textfield",
           },
+          {
+            property: "quizCategory",
+            title: "Kategori Kuis",
+            description:
+              "Kategori kuis: formatif, ulangan_harian, uts, atau uas",
+            inputMethod: "select",
+            options: {
+              formatif: "Formatif (Absensi)",
+              ulangan_harian: "Ulangan Harian",
+              uts: "UTS",
+              uas: "UAS",
+            },
+          },
         ],
         advanced: [],
         developer: [],
@@ -138,6 +151,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       accessToken: { type: String, attribute: "access-token" },
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
       sheetName: { type: String, attribute: "sheet-name" },
+      quizCategory: { type: String, attribute: "quiz-category" },
       studentName: { type: String, attribute: "student-name" },
       studentId: { type: String, attribute: "student-id" },
       studentNis: { type: String, attribute: "student-nis" },
@@ -182,6 +196,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this.accessToken = "";
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
+    this.quizCategory = "formatif";
     this.studentName = "";
     this.studentId = "";
     this.studentNis = "";
@@ -632,6 +647,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         nis: this.studentNis || "",
         absen: this.studentAbsen || "",
         kelas: this.studentKelas || "",
+        quizCategory: this.quizCategory || "formatif",
         type: "quiz"
       });
       const url = `${this.appsScriptUrl}?${params.toString()}`;

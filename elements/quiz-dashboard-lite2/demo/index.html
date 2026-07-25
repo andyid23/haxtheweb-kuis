@@ -4,15 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Demo Quiz Dashboard - Mode Dosen</title>
+
+  <style>
+:root,html, body {
+  margin: var(--ddd-spacing-0);
+  padding: var(--ddd-spacing-0);
+}
+    #demo {
+      margin: var(--ddd-spacing-2);
+    }
+
+    </style>
   <script type="module" src="../quiz-dashboard-lite2.js"></script>
   <script type="module" src="../lib/quiz-user-auth.js"></script>
 </head>
-<body style="padding: 24px; max-width: 1200px; margin: 0 auto; background: #f5f5f5;">
+<body>
+  
   <h1 style="color: #6750a4;">🎓 Demo: Mode Dosen (Lecturer)</h1>
   <p style="color: #666;">Atribut <code>view-mode="lecturer"</code> mengaktifkan tombol ⚙️ untuk input nilai UTS/UAS, ubah bobot, dan generate laporan rapor.</p>
 
   <quiz-dashboard-lite2
-    apps-script-url="https://script.google.com/macros/s/AKfycbx.../exec"
+    apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec"
     sheet-name="Pertemuan 1"
     view-mode="lecturer">
   </quiz-dashboard-lite2>
