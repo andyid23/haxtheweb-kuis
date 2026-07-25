@@ -1616,6 +1616,13 @@ export class TransparentGradebook extends LitElement {
     }
   }
 
+  _resetWeights() {
+    const defaults = { ...DEFAULT_GRADES };
+    localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(defaults));
+    this._gradesConfig = defaults;
+    window.dispatchEvent(new CustomEvent("a3-force-reload"));
+  }
+
   static get styles() {
     return css`
       :host {
@@ -1992,6 +1999,12 @@ export class TransparentGradebook extends LitElement {
                 <input type="number" id="uasWeight" class="config-input"
                        .value="${this._gradesConfig.uasWeight}" @change="${this._updateGradesConfig}">
               </div>
+            </div>
+
+            <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+              <button class="toggle-btn" style="font-size:11px;padding:6px 10px;background:#f3f0fa;" @click="${() => this._resetWeights()}">
+                🔄 Reset ke Default (1:3:2:2 = 8)
+              </button>
             </div>
 
             <div style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">
