@@ -34,6 +34,7 @@ function doGet(e) {
       case "aktivitas": return response(getAktivitasLog(sheet, name));
       case "getScores": return response(getStudentScores(studentId));
       case "getStudentRoster": return response(getStudentRoster());
+      case "getForumComments": return response(getForumComments());
       case "generateReport": return response(generateReport(e.parameter));
       case "list": 
       default: return response(getSheetList());
@@ -68,6 +69,9 @@ function doPost(e) {
     if (data.action === "getScores") return response(getStudentScores(data.studentId || ""));
     if (data.action === "getStudentRoster") return response(getStudentRoster());
     if (data.action === "generateReport") return response(generateReport(data));
+    if (data.action === "saveForumComment") return response(saveForumComment(data));
+    if (data.action === "deleteForumComment") return response(deleteForumComment(data));
+    if (data.action === "saveAssignment") return response(saveAssignment(data));
 
 // ✅ PERBAIKAN: Prioritaskan nama dari database jika studentId valid
 if (data.studentId) {
@@ -484,12 +488,14 @@ function generateReport(weights) {
   const allSheets = ss.getSheets();
   const studentStats = {};
 
-  // Dynamic weights from client, fallback to 1:3:2:2
+  // Dynamic weights from client, fallback to 1:3:2:2:0:0
   const wAtt = (weights && parseInt(weights.attendanceWeight)) || 1;
   const wUH = (weights && parseInt(weights.ulanganHarianWeight)) || 3;
   const wUts = (weights && parseInt(weights.utsWeight)) || 2;
   const wUas = (weights && parseInt(weights.uasWeight)) || 2;
-  const tw = wAtt + wUH + wUts + wUas;
+  const wSk = (weights && parseInt(weights.attitudeWeight)) || 0;
+  const wKr = (weights && parseInt(weights.skillWeight)) || 0;
+  const tw = wAtt + wUH + wUts + wUas + wSk + wKr;
 
   allSheets.forEach(sheet => {
     const name = sheet.getName();
@@ -517,7 +523,11 @@ function generateReport(weights) {
           pertemuanActivities: {},
           uhScores: [],
           highestUTS: 0,
-          highestUAS: 0
+          highestUAS: 0,
+          taskCount: 0,
+          forumCount: 0,
+          quizCount: 0,
+          readingCount: 0
         };
       }
 
@@ -528,10 +538,15 @@ function generateReport(weights) {
         if (category === "ulangan_harian") s.uhScores.push(score);
         else if (category === "uts" && score > s.highestUTS) s.highestUTS = score;
         else if (category === "uas" && score > s.highestUAS) s.highestUAS = score;
+        s.quizCount++;
       }
       if (isAktivitas) {
         if (!s.pertemuanActivities[pertemuanName]) s.pertemuanActivities[pertemuanName] = 0;
         s.pertemuanActivities[pertemuanName]++;
+        const actType = String(row[4] || "").toLowerCase();
+        if (actType === "assignment") s.taskCount++;
+        else if (actType === "discussion") s.forumCount++;
+        else if (actType === "reading") s.readingCount++;
       }
     }
   });
@@ -540,7 +555,7 @@ function generateReport(weights) {
   if (reportSheet) reportSheet.clear();
   else reportSheet = ss.insertSheet("Akumulasi Nilai Rapor");
 
-  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Jumlah Pertemuan", "Rata Aktivitas/Pertemuan", "Kehadiran (skala 100)", "Rata-rata UH", "Skor UTS", "Skor UAS", "Nilai Akhir", "Grade"];
+  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Jumlah Pertemuan", "Rata Aktivitas/Pertemuan", "Kehadiran (skala 100)", "Rata-rata UH", "Skor UTS", "Skor UAS", "Skor Sikap", "Skor Keterampilan", "Nilai Akhir", "Grade"];
   const hRange = reportSheet.getRange(1, 1, 1, headers.length);
   hRange.setValues([headers]);
   hRange.setFontWeight("bold");
@@ -557,20 +572,27 @@ function generateReport(weights) {
     const uh = s.uhScores.length > 0 ? Math.round(s.uhScores.reduce((a, b) => a + b, 0) / s.uhScores.length) : 0;
     const uts = s.highestUTS;
     const uas = s.highestUAS;
-    const total = (kehadiran * wAtt/tw) + (uh * wUH/tw) + (uts * wUts/tw) + (uas * wUas/tw);
+    // Auto-calc sikap from tasks + forums, keterampilan from quizzes + readings
+    const taskCount = s.taskCount || 0;
+    const forumCount = s.forumCount || 0;
+    const quizCount = s.quizCount || 0;
+    const readingCount = s.readingCount || 0;
+    const sikap = Math.min(taskCount * 25 + forumCount * 20, 100);
+    const keterampilan = Math.min(quizCount * 30 + readingCount * 10, 100);
+    const total = (kehadiran * wAtt/tw) + (uh * wUH/tw) + (uts * wUts/tw) + (uas * wUas/tw) + (sikap * wSk/tw) + (keterampilan * wKr/tw);
     const finalScore = Math.round(total * 10) / 10;
     const grade = finalScore >= 85 ? "A" : finalScore >= 75 ? "B+" : finalScore >= 65 ? "B" : finalScore >= 55 ? "C+" : finalScore >= 45 ? "C" : finalScore >= 35 ? "D" : "E";
 
     reportSheet.getRange(rowNum, 1, 1, headers.length).setValues([[
       s.studentId, s.nis, s.nama, s.absen, s.kelas,
       pertemuanCount, avgPerPertemuan, kehadiran,
-      uh, uts, uas, finalScore, grade
+      uh, uts, uas, sikap, keterampilan, finalScore, grade
     ]]);
     rowNum++;
   });
 
   reportSheet.autoResizeColumns(1, headers.length);
-  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2, weights: { attendanceWeight: wAtt, ulanganHarianWeight: wUH, utsWeight: wUts, uasWeight: wUas, totalWeight: tw } };
+  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2, weights: { attendanceWeight: wAtt, ulanganHarianWeight: wUH, utsWeight: wUts, uasWeight: wUas, attitudeWeight: wSk, skillWeight: wKr, totalWeight: tw } };
 }
 
 function response(obj) {
@@ -669,6 +691,139 @@ function getStudentRoster() {
   roster.sort((a, b) => b.nilaiAkhir - a.nilaiAkhir);
 
   return { status: "ok", roster: roster, total: roster.length };
+}
+
+// ============================================
+// FORUM CRUD — Sheet: "Forum Log"
+// ============================================
+
+function saveForumComment(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Forum Log");
+  const headers = ["Timestamp", "CommentID", "ParentID", "UserName", "StudentID", "Text", "Sheet", "Action"];
+  if (!sheet) {
+    sheet = ss.insertSheet("Forum Log");
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#6750a4").setFontColor("white");
+  }
+
+  const commentId = String(data.id || Date.now());
+  const parentId = data.parentId ? String(data.parentId) : "main";
+  const action = data.actionType || "post";
+
+  // Check if comment exists (edit vs new)
+  if (action === "edit") {
+    const allData = sheet.getDataRange().getValues();
+    for (let i = 1; i < allData.length; i++) {
+      if (String(allData[i][1]) === commentId) {
+        sheet.getRange(i + 1, 6).setValue(data.text || "");
+        return { status: "ok", message: "Komentar diperbarui", id: commentId };
+      }
+    }
+  }
+
+  // Check for like toggle
+  if (action === "like") {
+    const allData = sheet.getDataRange().getValues();
+    for (let i = 1; i < allData.length; i++) {
+      if (String(allData[i][1]) === commentId) {
+        const currentLikes = parseInt(allData[i][8]) || 0;
+        const newLikes = data.isLiked ? currentLikes + 1 : Math.max(0, currentLikes - 1);
+        sheet.getRange(i + 1, 9).setValue(newLikes);
+        return { status: "ok", likes: newLikes, id: commentId };
+      }
+    }
+  }
+
+  // New comment
+  sheet.appendRow([
+    new Date(), commentId, parentId,
+    data.user || "Anonymous", data.studentId || "",
+    data.text || "", data.sheet || "", "post", 0
+  ]);
+
+  return { status: "ok", message: "Komentar tersimpan", id: commentId, data: {
+    id: parseInt(commentId), parentId: data.parentId || null,
+    user: data.user || "Anonymous", studentId: data.studentId || "",
+    text: data.text || "", time: new Date().toISOString(), likes: 0, isLiked: false
+  }};
+}
+
+function getForumComments() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Forum Log");
+  if (!sheet || sheet.getLastRow() <= 1) return { status: "ok", comments: [] };
+
+  const data = sheet.getDataRange().getValues();
+  const comments = [];
+  for (let i = 1; i < data.length; i++) {
+    const action = String(data[i][7] || "post").trim();
+    if (action === "like") continue; // like actions are handled inline
+    comments.push({
+      id: parseInt(data[i][1]) || 0,
+      parentId: data[i][2] === "main" ? null : parseInt(data[i][2]) || null,
+      user: String(data[i][3] || ""),
+      studentId: String(data[i][4] || ""),
+      text: String(data[i][5] || ""),
+      sheet: String(data[i][6] || ""),
+      time: data[i][0] ? new Date(data[i][0]).toISOString() : "",
+      likes: parseInt(data[i][8]) || 0,
+      isLiked: false,
+      pinned: false,
+      replies: []
+    });
+  }
+  return { status: "ok", comments: comments };
+}
+
+function deleteForumComment(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Forum Log");
+  if (!sheet) return { status: "error", message: "Forum Log sheet tidak ditemukan" };
+
+  const commentId = String(data.id || "");
+  const allData = sheet.getDataRange().getValues();
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][1]) === commentId) {
+      sheet.deleteRow(i + 1);
+      return { status: "ok", message: "Komentar dihapus" };
+    }
+  }
+  return { status: "error", message: "Komentar tidak ditemukan" };
+}
+
+// ============================================
+// TUGAS — Sheet: "Tugas Log"
+// ============================================
+
+function saveAssignment(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Tugas Log");
+  const headers = ["Timestamp", "StudentID", "Nama", "Sheet", "Title", "Content"];
+  if (!sheet) {
+    sheet = ss.insertSheet("Tugas Log");
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold").setBackground("#6750a4").setFontColor("white");
+  }
+
+  // Check if student already submitted for this sheet+title (update instead of append)
+  const allData = sheet.getLastRow() > 1 ? sheet.getDataRange().getValues() : [];
+  for (let i = 1; i < allData.length; i++) {
+    if (String(allData[i][1]) === String(data.studentId || "") &&
+        String(allData[i][3]) === String(data.sheet || "") &&
+        String(allData[i][4]) === String(data.title || "")) {
+      sheet.getRange(i + 1, 6).setValue(data.content || "");
+      sheet.getRange(i + 1, 1).setValue(new Date());
+      return { status: "ok", message: "Tugas diperbarui" };
+    }
+  }
+
+  sheet.appendRow([
+    new Date(), data.studentId || "", data.name || "",
+    data.sheet || "", data.title || "", data.content || ""
+  ]);
+
+  return { status: "ok", message: "Tugas tersimpan" };
 }
 
 // --- FUNGSI TESTING ---

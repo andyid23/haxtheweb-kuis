@@ -137,15 +137,19 @@ function getThresholds() {
   return { ...DEFAULT_THRESHOLDS, ...parsed, minReading: Math.max(parsed.minReading || 0, DEFAULT_THRESHOLDS.minReading) };
 }
 
-// Global grades config defaults — Bobot: Kehadiran(1) : Ulangan Harian(3) : UTS(2) : UAS(2) = Total 8
+// Global grades config defaults — Bobot: Kehadiran(1) : Ulangan Harian(3) : UTS(2) : UAS(2) : Sikap(0) : Keterampilan(0) = Total 8
 const DEFAULT_GRADES = {
   attendanceWeight: 1,
   ulanganHarianWeight: 3,
   utsWeight: 2,
   uasWeight: 2,
+  attitudeWeight: 0,
+  skillWeight: 0,
   totalWeight: 8,
   uts: 0,
-  uas: 0
+  uas: 0,
+  sikap: 0,
+  keterampilan: 0
 };
 
 function getGradesConfig() {
@@ -1498,7 +1502,9 @@ export class TransparentGradebook extends LitElement {
       attendanceWeight: this._gradesConfig.attendanceWeight || 1,
       ulanganHarianWeight: this._gradesConfig.ulanganHarianWeight || 3,
       utsWeight: this._gradesConfig.utsWeight || 2,
-      uasWeight: this._gradesConfig.uasWeight || 2
+      uasWeight: this._gradesConfig.uasWeight || 2,
+      attitudeWeight: this._gradesConfig.attitudeWeight || 0,
+      skillWeight: this._gradesConfig.skillWeight || 0
     });
     const url = `${this.appsScriptUrl}?${params.toString()}`;
     fetch(url, { redirect: "follow" })
@@ -1554,26 +1560,44 @@ export class TransparentGradebook extends LitElement {
   }
 
   _getFinalScore() {
-    // Auto-calculate totalWeight from actual weights (ignore stale stored value)
     const wA = this._gradesConfig.attendanceWeight || 1;
     const wU = this._gradesConfig.ulanganHarianWeight || 3;
     const wT = this._gradesConfig.utsWeight || 2;
     const wS = this._gradesConfig.uasWeight || 2;
-    const tw = wA + wU + wT + wS;
+    const wSk = this._gradesConfig.attitudeWeight || 0;
+    const wKr = this._gradesConfig.skillWeight || 0;
+    const tw = wA + wU + wT + wS + wSk + wKr;
 
-    // Prefer server-side kehadiran when available
     const attScore = this._scores.kehadiran || this._getAttendanceScore().overall;
     const uhScore = this._scores.ulanganHarian?.average || this._scores.ulanganHarian?.highest || 0;
     const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
     const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
+    const sikapScore = this._scores.sikap || this._calcSikap();
+    const skillScore = this._scores.keterampilan || this._calcSkill();
 
-    const wAttN = wA / tw;
-    const wUHN = wU / tw;
-    const wUtsN = wT / tw;
-    const wUasN = wS / tw;
-
-    const final = (attScore * wAttN) + (uhScore * wUHN) + (utsScore * wUtsN) + (uasScore * wUasN);
+    const final = (attScore * wA/tw) + (uhScore * wU/tw) + (utsScore * wT/tw) +
+                  (uasScore * wS/tw) + (sikapScore * wSk/tw) + (skillScore * wKr/tw);
     return Math.round(final * 10) / 10;
+  }
+
+  _calcSikap() {
+    if (this._gradesConfig.sikap) return this._gradesConfig.sikap;
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekLogs = this._logs.filter(l => new Date(l.timestamp) >= oneWeekAgo);
+    const tasks = weekLogs.filter(l => l.type === "assignment").length;
+    const forums = weekLogs.filter(l => l.type === "discussion").length;
+    return Math.min((tasks * 25 + forums * 20), 100);
+  }
+
+  _calcSkill() {
+    if (this._gradesConfig.keterampilan) return this._gradesConfig.keterampilan;
+    const now = new Date();
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const weekLogs = this._logs.filter(l => new Date(l.timestamp) >= oneWeekAgo);
+    const quizzes = weekLogs.filter(l => l.type === "quiz").length;
+    const readings = weekLogs.filter(l => l.type === "reading").length;
+    return Math.min((quizzes * 30 + readings * 10), 100);
   }
 
   _getGradeLetter(score) {
@@ -1845,9 +1869,11 @@ export class TransparentGradebook extends LitElement {
     const uhScore = this._scores.ulanganHarian?.highest || 0;
     const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
     const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
+    const sikapScore = this._scores.sikap || this._calcSikap();
+    const skillScore = this._scores.keterampilan || this._calcSkill();
     const finalScore = this._getFinalScore();
     const gradeLetter = this._getGradeLetter(finalScore);
-    const tw = (this._gradesConfig.attendanceWeight || 1) + (this._gradesConfig.ulanganHarianWeight || 3) + (this._gradesConfig.utsWeight || 2) + (this._gradesConfig.uasWeight || 2);
+    const tw = (this._gradesConfig.attendanceWeight || 1) + (this._gradesConfig.ulanganHarianWeight || 3) + (this._gradesConfig.utsWeight || 2) + (this._gradesConfig.uasWeight || 2) + (this._gradesConfig.attitudeWeight || 0) + (this._gradesConfig.skillWeight || 0);
     const uhCount = this._scores.ulanganHarian?.count || 0;
 
     const rosterData = this._roster.length > 0 ? this._roster : [
@@ -1859,7 +1885,7 @@ export class TransparentGradebook extends LitElement {
         <div class="card-header">
           <h3>📖 Transparansi Nilai & Hasil Belajar</h3>
           <div style="display: flex; gap: 8px; align-items: center;">
-            <span style="font-size: 11px; color: #888;">Bobot: Kehadiran(${this._gradesConfig.attendanceWeight}) : UH(${this._gradesConfig.ulanganHarianWeight}) : UTS(${this._gradesConfig.utsWeight}) : UAS(${this._gradesConfig.uasWeight}) = ${tw}</span>
+            <span style="font-size: 11px; color: #888;">Bobot: Kehadiran(${this._gradesConfig.attendanceWeight}) : UH(${this._gradesConfig.ulanganHarianWeight}) : UTS(${this._gradesConfig.utsWeight}) : UAS(${this._gradesConfig.uasWeight}) : Sikap(${this._gradesConfig.attitudeWeight}) : Skill(${this._gradesConfig.skillWeight}) = ${tw}</span>
             ${this.viewMode === "lecturer" ? html`
               <button class="toggle-btn" @click="${() => this._isLecturerMode = !this._isLecturerMode}">
                 ⚙️ ${this._isLecturerMode ? "Kembali ke View Mahasiswa" : "Masuk Mode Dosen (Console)"}
@@ -1869,7 +1895,7 @@ export class TransparentGradebook extends LitElement {
         </div>
 
         <p style="font-size: 13px; color: #555; line-height: 1.5; margin-bottom: 20px;">
-          Bobot penilaian: <strong>Kehadiran(${this._gradesConfig.attendanceWeight}/${tw})</strong> + <strong>Ulangan Harian(${this._gradesConfig.ulanganHarianWeight}/${tw})</strong> + <strong>UTS(${this._gradesConfig.utsWeight}/${tw})</strong> + <strong>UAS(${this._gradesConfig.uasWeight}/${tw})</strong>. Kuis formatif hanya syarat hadir, tidak masuk akumulasi.
+          Bobot penilaian: <strong>Kehadiran(${this._gradesConfig.attendanceWeight}/${tw})</strong> + <strong>Ulangan Harian(${this._gradesConfig.ulanganHarianWeight}/${tw})</strong> + <strong>UTS(${this._gradesConfig.utsWeight}/${tw})</strong> + <strong>UAS(${this._gradesConfig.uasWeight}/${tw})</strong> + <strong>Sikap(${this._gradesConfig.attitudeWeight}/${tw})</strong> + <strong>Keterampilan(${this._gradesConfig.skillWeight}/${tw})</strong>. Kuis formatif hanya syarat hadir, tidak masuk akumulasi.
         </p>
 
         ${this._reportStatus ? html`<div class="msg msg-success">${this._reportStatus}</div>` : ""}
@@ -1892,6 +1918,14 @@ export class TransparentGradebook extends LitElement {
           <div class="summary-item">
             <span class="summary-label">Skor UAS (${this._gradesConfig.uasWeight}/${tw})</span>
             <span class="summary-val">${uasScore > 0 ? uasScore + '%' : '—'}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Sikap (${this._gradesConfig.attitudeWeight}/${tw})</span>
+            <span class="summary-val">${this._gradesConfig.attitudeWeight > 0 ? sikapScore + '%' : '—'}</span>
+          </div>
+          <div class="summary-item">
+            <span class="summary-label">Keterampilan (${this._gradesConfig.skillWeight}/${tw})</span>
+            <span class="summary-val">${this._gradesConfig.skillWeight > 0 ? skillScore + '%' : '—'}</span>
           </div>
           <div class="summary-item highlight">
             <span class="summary-label">Nilai Akhir</span>
@@ -1967,6 +2001,38 @@ export class TransparentGradebook extends LitElement {
                   `}
                 </td>
               </tr>
+
+              <!-- Sikap -->
+              <tr>
+                <td class="row-category">Sikap (${this._gradesConfig.attitudeWeight}/${tw})</td>
+                <td>Auto dari tugas + forum, atau input manual dosen</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.attitudeWeight / tw) * 100)}%</td>
+                <td>100</td>
+                <td>
+                  ${this._isLecturerMode ? html`
+                    <input type="number" id="sikap" class="config-input" style="width: 70px; padding: 4px;"
+                           .value="${this._gradesConfig.sikap}" @change="${this._updateGradesConfig}">
+                  ` : html`
+                    <span style="font-weight: bold; color: ${sikapScore > 0 ? '#059669' : '#999'};">${this._gradesConfig.attitudeWeight > 0 ? sikapScore : '—'}</span>
+                  `}
+                </td>
+              </tr>
+
+              <!-- Keterampilan -->
+              <tr>
+                <td class="row-category">Keterampilan (${this._gradesConfig.skillWeight}/${tw})</td>
+                <td>Auto dari quiz + baca, atau input manual dosen</td>
+                <td style="text-align: center; font-weight: bold;">${Math.round((this._gradesConfig.skillWeight / tw) * 100)}%</td>
+                <td>100</td>
+                <td>
+                  ${this._isLecturerMode ? html`
+                    <input type="number" id="keterampilan" class="config-input" style="width: 70px; padding: 4px;"
+                           .value="${this._gradesConfig.keterampilan}" @change="${this._updateGradesConfig}">
+                  ` : html`
+                    <span style="font-weight: bold; color: ${skillScore > 0 ? '#059669' : '#999'};">${this._gradesConfig.skillWeight > 0 ? skillScore : '—'}</span>
+                  `}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -1999,11 +2065,21 @@ export class TransparentGradebook extends LitElement {
                 <input type="number" id="uasWeight" class="config-input"
                        .value="${this._gradesConfig.uasWeight}" @change="${this._updateGradesConfig}">
               </div>
+              <div class="config-group">
+                <span class="config-label">Bobot Sikap (${this._gradesConfig.attitudeWeight}/${tw})</span>
+                <input type="number" id="attitudeWeight" class="config-input"
+                       .value="${this._gradesConfig.attitudeWeight}" @change="${this._updateGradesConfig}">
+              </div>
+              <div class="config-group">
+                <span class="config-label">Bobot Keterampilan (${this._gradesConfig.skillWeight}/${tw})</span>
+                <input type="number" id="skillWeight" class="config-input"
+                       .value="${this._gradesConfig.skillWeight}" @change="${this._updateGradesConfig}">
+              </div>
             </div>
 
             <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
               <button class="toggle-btn" style="font-size:11px;padding:6px 10px;background:#f3f0fa;" @click="${() => this._resetWeights()}">
-                🔄 Reset ke Default (1:3:2:2 = 8)
+                🔄 Reset ke Default (1:3:2:2:0:0 = 8)
               </button>
             </div>
 

@@ -461,6 +461,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._shortAnswerText = "";
     if (this.shuffleChoices) {
       this._shuffledQuestions = this.questions.map(q => {
+        if (!q.choices) return { ...q };
         const pairs = q.choices.map((c, i) => ({ text: c, origIndex: i }));
         const shuffled = this._shuffleArray(pairs);
         return { ...q, choices: shuffled.map(p => p.text), _correctMap: shuffled.map(p => p.origIndex) };
