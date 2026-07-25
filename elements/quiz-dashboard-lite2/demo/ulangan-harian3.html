@@ -14,25 +14,26 @@
   </style>
 </head>
 <body>
-  <h1>📝 Ulangan Harian 1</h1>
+  <h1>📝 Ulangan Harian 3</h1>
   <div class="info">
     <strong>Properties yang dikirim:</strong><br>
     <code>quiz-category="ulangan_harian"</code> &mdash; Masuk kalkulasi nilai akhir (bobot 3/8)<br>
-    <code>sheet-name="Ulangan Harian 1"</code> &mdash; Sheet terpisah per ulangan harian
+    <code>sheet-name="Ulangan Harian 3"</code> &mdash; Sheet terpisah per ulangan harian
   </div>
 
   <quiz-user-auth apps-script-url="https://script.google.com/macros/s/AKfycbwf3xQ0vh6mbn4Wc3I3AmN1OmNmyajYRu3GXnF2uCRzzjt76Ml3ew0S4LbCNmrwWBpi/exec"></quiz-user-auth>
 
   <explode-quiz
     id="uh1"
-    sheet-name="Ulangan Harian 1"
+    sheet-name="Ulangan Harian 3"
     quiz-category="ulangan_harian"
     apps-script-url="https://script.google.com/macros/s/AKfycbwf3xQ0vh6mbn4Wc3I3AmN1OmNmyajYRu3GXnF2uCRzzjt76Ml3ew0S4LbCNmrwWBpi/exec"
     editable="true"
+
     questions='[
-      {"question": "Apa kepanjangan dari HAX?", "choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"], "correct": 1},
-      {"question": "Lit Element digunakan untuk?", "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"], "correct": 1},
-      {"question": "Google Sheets API digunakan untuk?", "choices": ["Desain Grafis", "Manipulasi Data Spreadsheet", "Video Editing", "Music Production"], "correct": 1}
+      {"question": "Apa kepanjangan dari HAX?",   "image": "    https://lucidar.me/en/web-dev/files/css-frameworks.png","choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"], "correctAnswers": [1]},
+      {"question": "Lit Element digunakan untuk?", "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"], "correctAnswers": [3]},
+      {"question": "Google Sheets API digunakan untuk?", "choices": ["Desain Grafis", "Manipulasi Data Spreadsheet", "Video Editing", "Music Production"], "correctAnswers": [1]}
     ]'>
   </explode-quiz>
 

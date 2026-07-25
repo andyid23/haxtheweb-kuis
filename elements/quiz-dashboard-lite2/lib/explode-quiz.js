@@ -61,6 +61,12 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
               uas: "UAS",
             },
           },
+          {
+            property: "shuffleChoices",
+            title: "Acak Pilihan Jawaban",
+            description: "Mengacak urutan pilihan jawaban setiap kali kuis dimulai",
+            inputMethod: "boolean",
+          },
         ],
         advanced: [],
         developer: [],
@@ -152,6 +158,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
       sheetName: { type: String, attribute: "sheet-name" },
       quizCategory: { type: String, attribute: "quiz-category" },
+      shuffleChoices: { type: Boolean, attribute: "shuffle-choices", reflect: true },
       studentName: { type: String, attribute: "student-name" },
       studentId: { type: String, attribute: "student-id" },
       studentNis: { type: String, attribute: "student-nis" },
@@ -180,6 +187,18 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       _tempChoice3: { state: true },
       _tempCorrectIndex: { state: true },
       _editorOrigin: { state: true },
+      _tempQuestionImage: { state: true },
+      _tempQuestionType: { state: true },
+      _tempCorrectAnswers: { state: true },
+      _tempLeftItems: { state: true },
+      _tempRightItems: { state: true },
+      _tempCorrectPairs: { state: true },
+      _tempAcceptedAnswers: { state: true },
+      _tempAcceptedStatements: { state: true },
+      _shuffledQuestions: { state: true },
+      _selectedAnswers: { state: true },
+      _matchAnswers: { state: true },
+      _shortAnswerText: { state: true },
     };
   }
 
@@ -197,6 +216,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
     this.quizCategory = "formatif";
+    this.shuffleChoices = false;
     this.studentName = "";
     this.studentId = "";
     this.studentNis = "";
@@ -223,6 +243,18 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempChoice3 = "";
     this._tempCorrectIndex = "0";
     this._editorOrigin = "result";
+    this._shuffledQuestions = [];
+    this._selectedAnswers = new Set();
+    this._matchAnswers = {};
+    this._shortAnswerText = "";
+    this._tempQuestionImage = "";
+    this._tempQuestionType = "mc";
+    this._tempCorrectAnswers = [];
+    this._tempLeftItems = ["", ""];
+    this._tempRightItems = ["", ""];
+    this._tempCorrectPairs = {};
+    this._tempAcceptedAnswers = "";
+    this._tempAcceptedStatements = "[]";
     this.t = {
       quizTitle: "Kuis Interaktif",
       quizInstruction: "Masukkan nama Anda untuk memulai kuis.",
@@ -404,6 +436,15 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     }
   }
 
+  _shuffleArray(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
   _startQuiz() {
     const trimmed = this._nameInputValue.trim();
     if (trimmed.length <= 2) {
@@ -415,6 +456,18 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     }
     this._studentName = trimmed;
     this._validationError = "";
+    this._selectedAnswers = new Set();
+    this._matchAnswers = {};
+    this._shortAnswerText = "";
+    if (this.shuffleChoices) {
+      this._shuffledQuestions = this.questions.map(q => {
+        const pairs = q.choices.map((c, i) => ({ text: c, origIndex: i }));
+        const shuffled = this._shuffleArray(pairs);
+        return { ...q, choices: shuffled.map(p => p.text), _correctMap: shuffled.map(p => p.origIndex) };
+      });
+    } else {
+      this._shuffledQuestions = [];
+    }
     this._screen = "question";
   }
 
@@ -457,59 +510,98 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   }
 
   _renderQuestionScreen() {
-    const currentQuestion = this.questions[this._currentIndex];
-    const progressLabel = `${this.t.questionOf} ${this._currentIndex + 1} ${this.t.of} ${this.questions.length}`;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const q = activeQuestions[this._currentIndex];
+    const progressLabel = `${this.t.questionOf} ${this._currentIndex + 1} ${this.t.of} ${activeQuestions.length}`;
+    const qType = q.type || "mc";
+    const isMulti = Array.isArray(q.correctAnswers);
 
     return html`
       <header class="quiz-header">
-        <span class="progress-label" aria-label="${this.t.ariaProgressLabel}"
-          >${progressLabel}</span
-        >
-        <span class="score-display" aria-label="${this.t.ariaScoreDisplay}"
-          >${this.t.scoreLabel}: ${this._score}</span
-        >
+        <span class="progress-label">${progressLabel}</span>
+        <span class="score-display">${this.t.scoreLabel}: ${this._score}</span>
       </header>
 
-      <div class="question-text">${currentQuestion.question}</div>
+      <div class="question-text">${q.question}</div>
+      ${q.image ? html`<div style="text-align:center;margin:12px 0;"><img src="${q.image}" alt="Gambar soal" style="max-width:100%;border-radius:8px;border:1px solid #e0e0e0;"></div>` : ""}
 
-      <div class="answer-grid">
-        ${currentQuestion.choices.map((choice, index) => {
-          let btnClass = "answer-btn";
-          if (this._answered) {
-            if (index === currentQuestion.correctIndex) {
-              btnClass += " answer-btn--correct";
-            } else if (index === this._selectedIndex) {
-              btnClass += " answer-btn--wrong";
-            }
-          }
-
-          return html`
-            <button
-              class="${btnClass}"
-              ?disabled="${this._answered}"
-              @click="${() => this._selectAnswer(index)}"
-              aria-label="${this.t.ariaAnswerButton}: ${choice}"
-            >
-              ${choice}
-            </button>
-          `;
-        })}
-      </div>
+      ${qType === "matching" ? this._renderMatching(q) : ""}
+      ${qType === "shortAnswer" ? this._renderShortAnswer(q) : ""}
+      ${qType === "pgk" ? this._renderPGK(q) : ""}
+      ${qType === "mc" ? this._renderMC(q, isMulti) : ""}
 
       ${this._feedbackText
-        ? html`
-            <div
-              class="feedback-area ${this._feedbackPositive
-                ? "positive"
-                : "negative"}"
-              aria-live="polite"
-              aria-label="${this.t.ariaFeedback}"
-            >
-              ${this._feedbackText}
-            </div>
-          `
+        ? html`<div class="feedback-area ${this._feedbackPositive ? "positive" : "negative"}" aria-live="polite">${this._feedbackText}</div>`
         : ""}
     `;
+  }
+
+  _renderMC(q, isMulti) {
+    return html`<div class="answer-grid">
+      ${q.choices.map((choice, index) => {
+        let btnClass = "answer-btn";
+        if (this._answered) {
+          const correctIndices = q.correctAnswers || (q.correctIndex != null ? [q.correctIndex] : []);
+          const mappedCorrect = q._correctMap || correctIndices;
+          const isCorrectChoice = mappedCorrect.includes(index);
+          if (isCorrectChoice) btnClass += " answer-btn--correct";
+          else if (this._selectedAnswers.has(index) || index === this._selectedIndex) btnClass += " answer-btn--wrong";
+        }
+        return html`<button class="${btnClass}" ?disabled="${this._answered}"
+          @click="${() => isMulti ? this._toggleMultiAnswer(index) : this._selectAnswer(index)}"
+          aria-label="${this.t.ariaAnswerButton}: ${choice}">${choice}</button>`;
+      })}
+      ${isMulti && !this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitMultiAnswers()}">Kirim Jawaban</button>` : ""}
+    </div>`;
+  }
+
+  _renderPGK(q) {
+    const statements = q.statements || [];
+    return html`<table style="width:100%;border-collapse:collapse;font-size:13px;margin:12px 0;">
+      <thead><tr style="background:#f3f0fa;">
+        <th style="text-align:left;padding:8px;">Pernyataan</th>
+        <th style="text-align:center;width:80px;">Benar</th>
+        <th style="text-align:center;width:80px;">Salah</th>
+      </tr></thead>
+      <tbody>
+        ${statements.map((s, i) => html`<tr style="border-bottom:1px solid #eee;">
+          <td style="padding:8px;">${s.text}</td>
+          <td style="text-align:center;"><input type="radio" name="pgk_${this._currentIndex}_${i}" value="true"
+            ?disabled="${this._answered}" @change="${() => this._setPGK(i, true)}"
+            ${this._matchAnswers[i] === true ? "checked" : ""}></td>
+          <td style="text-align:center;"><input type="radio" name="pgk_${this._currentIndex}_${i}" value="false"
+            ?disabled="${this._answered}" @change="${() => this._setPGK(i, false)}"
+            ${this._matchAnswers[i] === false ? "checked" : ""}></td>
+        </tr>`)}
+      </tbody>
+    </table>
+    ${!this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitPGK()}">Kirim Jawaban</button>` : ""}`;
+  }
+
+  _renderMatching(q) {
+    const left = q.leftItems || [];
+    const right = q.rightItems || [];
+    return html`<div style="margin:12px 0;">
+      ${left.map((item, i) => html`<div style="display:flex;align-items:center;gap:12px;margin:8px 0;font-size:13px;">
+        <span style="min-width:200px;font-weight:500;">${i + 1}. ${item}</span>
+        <span style="font-size:18px;">→</span>
+        <select ?disabled="${this._answered}" style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
+          @change="${(e) => { this._matchAnswers = { ...this._matchAnswers, [i]: parseInt(e.target.value) }; this.requestUpdate(); }}">
+          <option value="-1">-- Pilih --</option>
+          ${right.map((r, ri) => html`<option value="${ri}" ?selected="${this._matchAnswers[i] === ri}">${String.fromCharCode(65 + ri)}. ${r}</option>`)}
+        </select>
+      </div>`)}
+      ${!this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitMatching()}">Kirim Jawaban</button>` : ""}
+    </div>`;
+  }
+
+  _renderShortAnswer(q) {
+    return html`<div style="margin:12px 0;">
+      <input type="text" ?disabled="${this._answered}" placeholder="Ketik jawaban..."
+        style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #ccc;font-size:14px;box-sizing:border-box;"
+        .value="${this._shortAnswerText}" @input="${(e) => { this._shortAnswerText = e.target.value; }}">
+      ${!this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitShortAnswer()}">Kirim Jawaban</button>` : ""}
+    </div>`;
   }
 
   _selectAnswer(choiceIndex) {
@@ -518,9 +610,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._answered = true;
     this._selectedIndex = choiceIndex;
 
-    const currentQuestion = this.questions[this._currentIndex];
-    const correctIndex = currentQuestion.correctIndex;
-    const isCorrect = choiceIndex === correctIndex;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const currentQuestion = activeQuestions[this._currentIndex];
+    const correctIndices = currentQuestion.correctAnswers || (currentQuestion.correctIndex != null ? [currentQuestion.correctIndex] : []);
+    const isCorrect = correctIndices.includes(choiceIndex);
 
     if (isCorrect) {
       this._score += 1;
@@ -528,7 +621,8 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       this._feedbackPositive = true;
       this._fireConfetti();
     } else {
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${currentQuestion.choices[correctIndex]}`;
+      const correctNames = correctIndices.map(i => currentQuestion.choices[i]).join(", ");
+      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
       this._feedbackPositive = false;
     }
 
@@ -538,13 +632,121 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     }, 1200);
   }
 
+  _toggleMultiAnswer(index) {
+    if (this._answered) return;
+    const s = new Set(this._selectedAnswers);
+    if (s.has(index)) s.delete(index); else s.add(index);
+    this._selectedAnswers = s;
+  }
+
+  _submitMultiAnswers() {
+    if (this._answered || this._selectedAnswers.size === 0) return;
+    this._answered = true;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const q = activeQuestions[this._currentIndex];
+    const correct = new Set(q.correctAnswers || []);
+    const selected = this._selectedAnswers;
+    const isCorrect = correct.size === selected.size && [...correct].every(c => selected.has(c));
+    if (isCorrect) {
+      this._score += 1;
+      this._feedbackText = this.t.feedbackCorrect;
+      this._feedbackPositive = true;
+      this._fireConfetti();
+    } else {
+      const correctNames = [...correct].map(i => q.choices[i]).join(", ");
+      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
+      this._feedbackPositive = false;
+    }
+    setTimeout(() => this._advanceQuiz(), 1200);
+  }
+
+  _setPGK(index, value) {
+    if (this._answered) return;
+    this._matchAnswers = { ...this._matchAnswers, [index]: value };
+  }
+
+  _submitPGK() {
+    if (this._answered) return;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const q = activeQuestions[this._currentIndex];
+    const statements = q.statements || [];
+    if (Object.keys(this._matchAnswers).length < statements.length) return;
+    this._answered = true;
+    const correctAnswers = statements.map(s => s.answer);
+    let allCorrect = true;
+    for (let i = 0; i < statements.length; i++) {
+      if (this._matchAnswers[i] !== correctAnswers[i]) { allCorrect = false; break; }
+    }
+    if (allCorrect) {
+      this._score += 1;
+      this._feedbackText = this.t.feedbackCorrect;
+      this._feedbackPositive = true;
+      this._fireConfetti();
+    } else {
+      const answerText = statements.map((s, i) => `${i + 1}: ${s.answer ? "Benar" : "Salah"}`).join(", ");
+      this._feedbackText = `${this.t.feedbackWrongPrefix}${answerText}`;
+      this._feedbackPositive = false;
+    }
+    setTimeout(() => this._advanceQuiz(), 1200);
+  }
+
+  _submitMatching() {
+    if (this._answered) return;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const q = activeQuestions[this._currentIndex];
+    const left = q.leftItems || [];
+    const correctPairs = q.correctPairs || {};
+    if (Object.keys(this._matchAnswers).length < left.length) return;
+    this._answered = true;
+    let allCorrect = true;
+    for (let i = 0; i < left.length; i++) {
+      if (this._matchAnswers[i] !== correctPairs[i]) { allCorrect = false; break; }
+    }
+    if (allCorrect) {
+      this._score += 1;
+      this._feedbackText = this.t.feedbackCorrect;
+      this._feedbackPositive = true;
+      this._fireConfetti();
+    } else {
+      const correctText = Object.entries(correctPairs).map(([k, v]) => `${parseInt(k) + 1}→${String.fromCharCode(65 + v)}`).join(", ");
+      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctText}`;
+      this._feedbackPositive = false;
+    }
+    setTimeout(() => this._advanceQuiz(), 1200);
+  }
+
+  _submitShortAnswer() {
+    if (this._answered) return;
+    const text = this._shortAnswerText.trim().toLowerCase();
+    if (!text) return;
+    this._answered = true;
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    const q = activeQuestions[this._currentIndex];
+    const accepted = (q.acceptedAnswers || []).map(a => a.toLowerCase());
+    const isCorrect = accepted.some(a => text.includes(a));
+    if (isCorrect) {
+      this._score += 1;
+      this._feedbackText = this.t.feedbackCorrect;
+      this._feedbackPositive = true;
+      this._fireConfetti();
+    } else {
+      this._feedbackText = `${this.t.feedbackWrongPrefix}${(q.acceptedAnswers || []).join(" / ")}`;
+      this._feedbackPositive = false;
+    }
+    setTimeout(() => this._advanceQuiz(), 1200);
+  }
+
   _advanceQuiz() {
-    if (this._currentIndex < this.questions.length - 1) {
+    const activeQuestions = this._shuffledQuestions.length > 0 ? this._shuffledQuestions : this.questions;
+    if (this._currentIndex < activeQuestions.length - 1) {
       this._currentIndex += 1;
       this._answered = false;
       this._selectedIndex = -1;
       this._feedbackText = "";
       this._feedbackPositive = false;
+      this._selectedAnswers = new Set();
+      this._matchAnswers = {};
+      this._shortAnswerText = "";
     } else {
       this._submitToSheets(this._studentName, this._score);
       
@@ -752,321 +954,264 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   }
 
   _renderEditorScreen() {
+    const qType = this._tempQuestionType || "mc";
     return html`
       <header class="edit-header">
         <h2 class="edit-title">${this.t.editTitle}</h2>
-        <button
-          class="close-editor-btn"
-          @click="${this._saveAll}"
-          aria-label="${this.t.ariaCloseEditor}"
-        >
-          ${this.t.closeEditor}
-        </button>
+        <button class="close-editor-btn" @click="${this._saveAll}">${this.t.closeEditor}</button>
       </header>
 
       <div class="editor-content">
         <form class="add-question-form">
-          <textarea
-            class="question-text-input"
-            .value="${this._tempQuestionText}"
-            @input="${(e) => (this._tempQuestionText = e.target.value)}"
-            placeholder="${this.t.questionPlaceholder}"
-            aria-label="${this.t.ariaQuestionInput}"
-          ></textarea>
-
-          <div class="choices-container">
-            ${[0, 1, 2, 3].map(
-              (index) => html`
-                <div class="choice-input-wrapper">
-                  <input
-                    class="choice-input"
-                    .value="${this[`_tempChoice${index}`]}"
-                    @input="${(e) =>
-                      (this[`_tempChoice${index}`] = e.target.value)}"
-                    placeholder="${this.t.choicePlaceholder.replace(
-                      "{N}",
-                      index + 1,
-                    )}"
-                    aria-label="${this.t.ariaChoiceInput.replace(
-                      "{N}",
-                      index + 1,
-                    )}"
-                  />
-                  <label class="choice-label">
-                    <input
-                      type="radio"
-                      name="correct-choice"
-                      .checked="${this._tempCorrectIndex == index}"
-                      @change="${() => (this._tempCorrectIndex = index)}"
-                      aria-label="${this.t.ariaCorrectChoice}"
-                    />
-                    ${this.t.choiceCorrectLabel}
-                  </label>
-                </div>
-              `,
-            )}
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <select style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;" .value="${qType}" @change="${(e) => { this._tempQuestionType = e.target.value; }}">
+              <option value="mc">Pilihan Ganda</option>
+              <option value="pgk">PG Kompleks (Benar/Salah)</option>
+              <option value="matching">Menjodohkan</option>
+              <option value="shortAnswer">Isian Singkat</option>
+            </select>
+            <input type="text" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
+              placeholder="URL gambar (opsional)" .value="${this._tempQuestionImage}"
+              @input="${(e) => { this._tempQuestionImage = e.target.value; }}">
           </div>
+          ${this._tempQuestionImage ? html`<div style="text-align:center;margin:8px 0;"><img src="${this._tempQuestionImage}" style="max-width:200px;border-radius:6px;border:1px solid #ddd;"></div>` : ""}
 
-          <button
-            type="button"
-            class="add-question-btn"
-            @click="${this._addQuestion}"
-            aria-label="${this.t.ariaAddForm}"
-          >
-            ${this.t.addQuestionBtn}
-          </button>
+          <textarea class="question-text-input" .value="${this._tempQuestionText}"
+            @input="${(e) => (this._tempQuestionText = e.target.value)}"
+            placeholder="${this.t.questionPlaceholder}"></textarea>
+
+          ${qType === "mc" ? this._renderEditorMC() : ""}
+          ${qType === "pgk" ? this._renderEditorPGK() : ""}
+          ${qType === "matching" ? this._renderEditorMatching() : ""}
+          ${qType === "shortAnswer" ? this._renderEditorShortAnswer() : ""}
+
+          <button type="button" class="add-question-btn" @click="${this._addQuestion}">${this.t.addQuestionBtn}</button>
         </form>
 
-        <div class="questions-list" aria-label="${this.t.ariaQuestionsList}">
-          ${this._tempQuestions.map(
-            (question, index) => html`
-              <div
-                class="question-card"
-                aria-label="${this.t.ariaQuestionCard}"
-              >
-                ${this._editingIndex === index
-                  ? html`
-                      <!-- Hidden edit form -->
-                      <div class="edit-form">
-                        <textarea
-                          class="edit-question-text-input"
-                          .value="${this._tempQuestionText}"
-                          @input="${(e) =>
-                            (this._tempQuestionText = e.target.value)}"
-                          placeholder="${this.t.questionPlaceholder}"
-                          aria-label="${this.t.ariaQuestionInput}"
-                        ></textarea>
-                        <div class="choices-container">
-                          ${[0, 1, 2, 3].map(
-                            (choiceIndex) => html`
-                              <div class="choice-input-wrapper">
-                                <input
-                                  class="edit-choice-input"
-                                  .value="${this[`_tempChoice${choiceIndex}`]}"
-                                  @input="${(e) =>
-                                    (this[`_tempChoice${choiceIndex}`] =
-                                      e.target.value)}"
-                                  placeholder="${this.t.choicePlaceholder.replace(
-                                    "{N}",
-                                    choiceIndex + 1,
-                                  )}"
-                                  aria-label="${this.t.ariaChoiceInput.replace(
-                                    "{N}",
-                                    choiceIndex + 1,
-                                  )}"
-                                />
-                                <label class="choice-label">
-                                  <input
-                                    type="radio"
-                                    name="correct-choice-edit"
-                                    .checked="${this._tempCorrectIndex ==
-                                    choiceIndex}"
-                                    @change="${() =>
-                                      (this._tempCorrectIndex = choiceIndex)}"
-                                    aria-label="${this.t.ariaCorrectChoice}"
-                                  />
-                                  ${this.t.choiceCorrectLabel}
-                                </label>
-                              </div>
-                            `,
-                          )}
-                        </div>
-                        <div class="edit-form-actions">
-                          <button
-                            type="button"
-                            class="save-edit-btn"
-                            @click="${this._saveEditQuestion}"
-                            aria-label="${this.t.ariaSaveEdit}"
-                          >
-                            ${this.t.saveEditBtn}
-                          </button>
-                          <button
-                            type="button"
-                            class="cancel-edit-btn"
-                            @click="${this._cancelEditQuestion}"
-                            aria-label="${this.t.ariaCancelEdit}"
-                          >
-                            ${this.t.cancelEditBtn}
-                          </button>
-                        </div>
-                      </div>
-                    `
-                  : html`
-                      <!-- Question preview with actions -->
-                      <div class="card-header">
-                        <span class="question-preview">
-                          ${question.question}
-                        </span>
-                        <div class="card-actions">
-                          <button
-                            class="edit-btn"
-                            @click="${() => this._startEditQuestion(index)}"
-                            aria-label="${this.t.ariaEditQuestion}"
-                          >
-                            ${this.t.editQuestionBtn}
-                          </button>
-                          <button
-                            class="delete-btn"
-                            ?disabled="${this._tempQuestions.length <= 3}"
-                            @click="${() => this._deleteQuestion(index)}"
-                            aria-label="${this.t.ariaDeleteQuestion}"
-                          >
-                            ${this.t.deleteQuestionBtn}
-                          </button>
-                        </div>
-                      </div>
-                    `}
-              </div>
-            `,
-          )}
+        <div class="questions-list">
+          ${this._tempQuestions.map((question, index) => html`
+            <div class="question-card">
+              ${this._editingIndex === index ? html`
+                <div class="edit-form">
+                  <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <select style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
+                      .value="${this._tempQuestionType}" @change="${(e) => { this._tempQuestionType = e.target.value; }}">
+                      <option value="mc">Pilihan Ganda</option>
+                      <option value="pgk">PG Kompleks</option>
+                      <option value="matching">Menjodohkan</option>
+                      <option value="shortAnswer">Isian Singkat</option>
+                    </select>
+                    <input type="text" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
+                      placeholder="URL gambar" .value="${this._tempQuestionImage}"
+                      @input="${(e) => { this._tempQuestionImage = e.target.value; }}">
+                  </div>
+                  <textarea class="edit-question-text-input" .value="${this._tempQuestionText}"
+                    @input="${(e) => (this._tempQuestionText = e.target.value)}"
+                    placeholder="${this.t.questionPlaceholder}"></textarea>
+                  ${this._tempQuestionType === "mc" ? this._renderEditorMC() : ""}
+                  ${this._tempQuestionType === "pgk" ? this._renderEditorPGK() : ""}
+                  ${this._tempQuestionType === "matching" ? this._renderEditorMatching() : ""}
+                  ${this._tempQuestionType === "shortAnswer" ? this._renderEditorShortAnswer() : ""}
+                  <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button type="button" class="add-question-btn" @click="${this._saveEditQuestion}">${this.t.saveEditBtn}</button>
+                    <button type="button" class="add-question-btn" style="background:#ccc;color:#333;" @click="${this._cancelEditQuestion}">${this.t.cancelEditBtn}</button>
+                  </div>
+                </div>
+              ` : html`
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>
+                    <strong style="color:#6750a4;">[${(question.type || "mc").toUpperCase()}]</strong> ${question.question}
+                    ${question.image ? html`<span style="font-size:11px;color:#888;">[gambar]</span>` : ""}
+                  </div>
+                  <div style="display:flex;gap:6px;">
+                    <button class="edit-btn" @click="${() => this._startEditQuestion(index)}">${this.t.editQuestionBtn}</button>
+                    <button class="delete-btn" @click="${() => this._deleteQuestion(index)}">${this.t.deleteQuestionBtn}</button>
+                  </div>
+                </div>
+              `}
+            </div>
+          `)}
         </div>
-      </div>
-
-      <div class="editor-actions">
-        <button
-          class="save-all-btn"
-          @click="${this._saveAll}"
-          aria-label="${this.t.ariaSaveAll}"
-        >
-          ${this.t.saveAllBtn}
-        </button>
-        <button
-          class="cancel-all-btn"
-          @click="${this._cancelAll}"
-          aria-label="${this.t.ariaCancelAll}"
-        >
-          ${this.t.cancelAllBtn}
-        </button>
       </div>
     `;
   }
 
+  _renderEditorMC() {
+    const isMulti = this._tempCorrectAnswers.length > 1;
+    return html`
+      <div class="choices-container">
+        ${[0, 1, 2, 3].map(index => html`
+          <div class="choice-input-wrapper">
+            <input class="choice-input" .value="${this[`_tempChoice${index}`]}"
+              @input="${(e) => (this[`_tempChoice${index}`] = e.target.value)}"
+              placeholder="${this.t.choicePlaceholder.replace("{N}", index + 1)}" />
+            <label class="choice-label">
+              <input type="checkbox" ?checked="${this._tempCorrectAnswers.includes(index)}"
+                @change="${(e) => {
+                  if (e.target.checked) this._tempCorrectAnswers = [...this._tempCorrectAnswers, index];
+                  else this._tempCorrectAnswers = this._tempCorrectAnswers.filter(i => i !== index);
+                  if (this._tempCorrectAnswers.length <= 1) this._tempCorrectIndex = index.toString();
+                }}" />
+              ${this.t.choiceCorrectLabel}
+            </label>
+          </div>
+        `)}
+      </div>
+      ${this._tempCorrectAnswers.length <= 1 ? html`
+        <div style="font-size:11px;color:#888;margin-top:4px;">Pilih 1 jawaban benar (radio). Centang lebih dari 1 untuk mode PG Kompleks.</div>
+      ` : html`
+        <div style="font-size:11px;color:#6750a4;margin-top:4px;font-weight:bold;">Mode PG Kompleks: ${this._tempCorrectAnswers.length} jawaban benar dipilih</div>
+      `}
+    `;
+  }
+
+  _renderEditorPGK() {
+    let statements = [];
+    try { statements = JSON.parse(this._tempAcceptedStatements || "[]"); } catch (_) {}
+    return html`<div style="margin:8px 0;font-size:13px;">
+      <div style="font-weight:500;margin-bottom:4px;">Pernyataan (JSON array, format: [{"text":"...","answer":true}]):</div>
+      <textarea style="width:100%;min-height:80px;padding:8px;border-radius:6px;border:1px solid #ccc;font-size:12px;font-family:monospace;"
+        .value="${this._tempAcceptedStatements}" @input="${(e) => { this._tempAcceptedStatements = e.target.value; }}"></textarea>
+    </div>`;
+  }
+
+  _renderEditorMatching() {
+    return html`<div style="margin:8px 0;font-size:13px;">
+      <div style="display:flex;gap:16px;">
+        <div style="flex:1;">
+          <div style="font-weight:500;margin-bottom:4px;">Item Kiri:</div>
+          ${this._tempLeftItems.map((item, i) => html`
+            <input style="width:100%;padding:4px 8px;margin:4px 0;border-radius:4px;border:1px solid #ccc;font-size:12px;"
+              .value="${item}" @input="${(e) => { const a = [...this._tempLeftItems]; a[i] = e.target.value; this._tempLeftItems = a; }}"
+              placeholder="Item ${i + 1}">
+          `)}
+          <button type="button" style="font-size:11px;margin-top:4px;padding:2px 8px;border-radius:4px;border:1px solid #ccc;"
+            @click="${() => { this._tempLeftItems = [...this._tempLeftItems, ""]; }}">+ Tambah</button>
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:500;margin-bottom:4px;">Item Kanan:</div>
+          ${this._tempRightItems.map((item, i) => html`
+            <input style="width:100%;padding:4px 8px;margin:4px 0;border-radius:4px;border:1px solid #ccc;font-size:12px;"
+              .value="${item}" @input="${(e) => { const a = [...this._tempRightItems]; a[i] = e.target.value; this._tempRightItems = a; }}"
+              placeholder="Item ${String.fromCharCode(65 + i)}">
+          `)}
+          <button type="button" style="font-size:11px;margin-top:4px;padding:2px 8px;border-radius:4px;border:1px solid #ccc;"
+            @click="${() => { this._tempRightItems = [...this._tempRightItems, ""]; }}">+ Tambah</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;">
+        <div style="font-weight:500;margin-bottom:4px;">Kunci Jawaban (JSON: {"0":1,"1":0} artinya Item Kiri 0→Item Kanan B):</div>
+        <input style="width:100%;padding:6px 8px;border-radius:4px;border:1px solid #ccc;font-size:12px;font-family:monospace;"
+          .value="${JSON.stringify(this._tempCorrectPairs)}"
+          @input="${(e) => { try { this._tempCorrectPairs = JSON.parse(e.target.value); } catch(_){} }}">
+      </div>
+    </div>`;
+  }
+
+  _renderEditorShortAnswer() {
+    return html`<div style="margin:8px 0;font-size:13px;">
+      <div style="font-weight:500;margin-bottom:4px;">Jawaban yang diterima (pisahkan koma):</div>
+      <input style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
+        placeholder="contoh: biomassa, sekam padi, limbah pertanian"
+        .value="${this._tempAcceptedAnswers}" @input="${(e) => { this._tempAcceptedAnswers = e.target.value; }}">
+    </div>`;
+  }
+
   _addQuestion() {
-    // Guard: validate form
-    if (
-      !this._tempQuestionText.trim() ||
-      !this._tempChoice0.trim() ||
-      !this._tempChoice1.trim() ||
-      !this._tempChoice2.trim() ||
-      !this._tempChoice3.trim()
-    ) {
-      console.warn(this.t.emptyChoiceError);
-      return;
+    if (!this._tempQuestionText.trim()) { console.warn(this.t.emptyQuestionError); return; }
+
+    const qType = this._tempQuestionType || "mc";
+    const newQuestion = { type: qType, question: this._tempQuestionText.trim() };
+
+    if (this._tempQuestionImage.trim()) newQuestion.image = this._tempQuestionImage.trim();
+
+    if (qType === "mc") {
+      if (!this._tempChoice0.trim() || !this._tempChoice1.trim()) { console.warn(this.t.emptyChoiceError); return; }
+      newQuestion.choices = [this._tempChoice0.trim(), this._tempChoice1.trim(), this._tempChoice2.trim(), this._tempChoice3.trim()].filter(c => c);
+      if (this._tempCorrectAnswers.length > 1) newQuestion.correctAnswers = [...this._tempCorrectAnswers];
+      else newQuestion.correctIndex = parseInt(this._tempCorrectIndex, 10);
+    } else if (qType === "pgk") {
+      newQuestion.statements = JSON.parse(this._tempAcceptedStatements || "[]");
+    } else if (qType === "matching") {
+      newQuestion.leftItems = [...this._tempLeftItems];
+      newQuestion.rightItems = [...this._tempRightItems];
+      newQuestion.correctPairs = { ...this._tempCorrectPairs };
+    } else if (qType === "shortAnswer") {
+      newQuestion.acceptedAnswers = this._tempAcceptedAnswers.split(",").map(s => s.trim()).filter(Boolean);
     }
 
-    const newQuestion = {
-      question: this._tempQuestionText.trim(),
-      choices: [
-        this._tempChoice0.trim(),
-        this._tempChoice1.trim(),
-        this._tempChoice2.trim(),
-        this._tempChoice3.trim(),
-      ],
-      correctIndex: parseInt(this._tempCorrectIndex, 10),
-    };
-
-    // Reassign so Lit detects the change and re-renders
     this._tempQuestions = [...this._tempQuestions, newQuestion];
-    this._tempQuestionText = "";
-    this._tempChoice0 = "";
-    this._tempChoice1 = "";
-    this._tempChoice2 = "";
-    this._tempChoice3 = "";
-    this._tempCorrectIndex = "0";
+    this._resetEditorForm();
   }
 
   _deleteQuestion(index) {
-    // Guard: ensure minimum 3 questions remain
-    if (this._tempQuestions.length <= 3) {
-      console.warn(this.t.minQuestionsError);
-      return;
-    }
-
-    // Reassign so Lit detects the change and re-renders
+    if (this._tempQuestions.length <= 3) { console.warn(this.t.minQuestionsError); return; }
     this._tempQuestions = this._tempQuestions.filter((_, i) => i !== index);
-    if (this._editingIndex === index) {
-      this._editingIndex = -1;
-      this._tempQuestionText = "";
-      this._tempChoice0 = "";
-      this._tempChoice1 = "";
-      this._tempChoice2 = "";
-      this._tempChoice3 = "";
-      this._tempCorrectIndex = "0";
-    } else if (this._editingIndex > index) {
-      // Shift editing index down if item above it was removed
-      this._editingIndex = this._editingIndex - 1;
-    }
+    if (this._editingIndex === index) { this._editingIndex = -1; this._resetEditorForm(); }
+    else if (this._editingIndex > index) this._editingIndex--;
+  }
+
+  _resetEditorForm() {
+    this._tempQuestionText = "";
+    this._tempChoice0 = ""; this._tempChoice1 = ""; this._tempChoice2 = ""; this._tempChoice3 = "";
+    this._tempCorrectIndex = "0"; this._tempCorrectAnswers = [];
+    this._tempQuestionImage = ""; this._tempQuestionType = "mc";
+    this._tempLeftItems = ["", ""]; this._tempRightItems = ["", ""];
+    this._tempCorrectPairs = {}; this._tempAcceptedAnswers = "";
+    this._tempAcceptedStatements = "[]";
   }
 
   _startEditQuestion(index) {
     if (index < 0 || index >= this._tempQuestions.length) return;
-
     this._editingIndex = index;
-    const question = this._tempQuestions[index];
-    this._tempQuestionText = question.question;
-    this._tempChoice0 = question.choices[0] || "";
-    this._tempChoice1 = question.choices[1] || "";
-    this._tempChoice2 = question.choices[2] || "";
-    this._tempChoice3 = question.choices[3] || "";
-    this._tempCorrectIndex = question.correctIndex.toString();
+    const q = this._tempQuestions[index];
+    this._tempQuestionText = q.question;
+    this._tempQuestionImage = q.image || "";
+    this._tempQuestionType = q.type || "mc";
+    this._tempChoice0 = (q.choices || [])[0] || "";
+    this._tempChoice1 = (q.choices || [])[1] || "";
+    this._tempChoice2 = (q.choices || [])[2] || "";
+    this._tempChoice3 = (q.choices || [])[3] || "";
+    this._tempCorrectIndex = q.correctIndex != null ? q.correctIndex.toString() : "0";
+    this._tempCorrectAnswers = q.correctAnswers || [];
+    this._tempLeftItems = q.leftItems || ["", ""];
+    this._tempRightItems = q.rightItems || ["", ""];
+    this._tempCorrectPairs = q.correctPairs || {};
+    this._tempAcceptedAnswers = (q.acceptedAnswers || []).join(", ");
+    this._tempAcceptedStatements = JSON.stringify(q.statements || []);
   }
 
   _saveEditQuestion() {
-    // Guard: validate form
-    if (
-      !this._tempQuestionText.trim() ||
-      !this._tempChoice0.trim() ||
-      !this._tempChoice1.trim() ||
-      !this._tempChoice2.trim() ||
-      !this._tempChoice3.trim()
-    ) {
-      console.warn(this.t.emptyChoiceError);
-      return;
+    if (!this._tempQuestionText.trim()) { console.warn(this.t.emptyQuestionError); return; }
+    if (this._editingIndex < 0 || this._editingIndex >= this._tempQuestions.length) return;
+
+    const qType = this._tempQuestionType || "mc";
+    const updated = { type: qType, question: this._tempQuestionText.trim() };
+    if (this._tempQuestionImage.trim()) updated.image = this._tempQuestionImage.trim();
+
+    if (qType === "mc") {
+      updated.choices = [this._tempChoice0.trim(), this._tempChoice1.trim(), this._tempChoice2.trim(), this._tempChoice3.trim()].filter(c => c);
+      if (this._tempCorrectAnswers.length > 1) updated.correctAnswers = [...this._tempCorrectAnswers];
+      else updated.correctIndex = parseInt(this._tempCorrectIndex, 10);
+    } else if (qType === "pgk") {
+      updated.statements = JSON.parse(this._tempAcceptedStatements || "[]");
+    } else if (qType === "matching") {
+      updated.leftItems = [...this._tempLeftItems];
+      updated.rightItems = [...this._tempRightItems];
+      updated.correctPairs = { ...this._tempCorrectPairs };
+    } else if (qType === "shortAnswer") {
+      updated.acceptedAnswers = this._tempAcceptedAnswers.split(",").map(s => s.trim()).filter(Boolean);
     }
 
-    // Guard: must be editing an existing question
-    if (
-      this._editingIndex < 0 ||
-      this._editingIndex >= this._tempQuestions.length
-    )
-      return;
-
-    // Reassign so Lit detects the change and re-renders
-    this._tempQuestions = this._tempQuestions.map((q, i) =>
-      i === this._editingIndex
-        ? {
-            question: this._tempQuestionText.trim(),
-            choices: [
-              this._tempChoice0.trim(),
-              this._tempChoice1.trim(),
-              this._tempChoice2.trim(),
-              this._tempChoice3.trim(),
-            ],
-            correctIndex: parseInt(this._tempCorrectIndex, 10),
-          }
-        : q,
-    );
-
+    this._tempQuestions = this._tempQuestions.map((q, i) => i === this._editingIndex ? updated : q);
     this._editingIndex = -1;
-    this._tempQuestionText = "";
-    this._tempChoice0 = "";
-    this._tempChoice1 = "";
-    this._tempChoice2 = "";
-    this._tempChoice3 = "";
-    this._tempCorrectIndex = "0";
+    this._resetEditorForm();
   }
 
   _cancelEditQuestion() {
-    // Guard: must be editing an existing question
     if (this._editingIndex < 0) return;
-
     this._editingIndex = -1;
-    this._tempQuestionText = "";
-    this._tempChoice0 = "";
-    this._tempChoice1 = "";
-    this._tempChoice2 = "";
-    this._tempChoice3 = "";
-    this._tempCorrectIndex = "0";
+    this._resetEditorForm();
   }
 
   _saveAll() {

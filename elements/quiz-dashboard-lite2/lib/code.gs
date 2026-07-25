@@ -33,7 +33,8 @@ function doGet(e) {
       case "pertemuan": return response(getPertemuanData(sheet));
       case "aktivitas": return response(getAktivitasLog(sheet, name));
       case "getScores": return response(getStudentScores(studentId));
-      case "generateReport": return response(generateReport());
+      case "getStudentRoster": return response(getStudentRoster());
+      case "generateReport": return response(generateReport(e.parameter));
       case "list": 
       default: return response(getSheetList());
     }
@@ -65,7 +66,8 @@ function doPost(e) {
     if (data.action === "login") return response(loginUser(data));
     if (data.action === "verify") return response(verifyUser(data.studentId || ""));
     if (data.action === "getScores") return response(getStudentScores(data.studentId || ""));
-    if (data.action === "generateReport") return response(generateReport());
+    if (data.action === "getStudentRoster") return response(getStudentRoster());
+    if (data.action === "generateReport") return response(generateReport(data));
 
 // ✅ PERBAIKAN: Prioritaskan nama dari database jika studentId valid
 if (data.studentId) {
@@ -477,10 +479,17 @@ function getStudentScores(studentId) {
   return { status: "ok", data: result };
 }
 
-function generateReport() {
+function generateReport(weights) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const allSheets = ss.getSheets();
   const studentStats = {};
+
+  // Dynamic weights from client, fallback to 1:3:2:2
+  const wAtt = (weights && parseInt(weights.attendanceWeight)) || 1;
+  const wUH = (weights && parseInt(weights.ulanganHarianWeight)) || 3;
+  const wUts = (weights && parseInt(weights.utsWeight)) || 2;
+  const wUas = (weights && parseInt(weights.uasWeight)) || 2;
+  const tw = wAtt + wUH + wUts + wUas;
 
   allSheets.forEach(sheet => {
     const name = sheet.getName();
@@ -548,7 +557,7 @@ function generateReport() {
     const uh = s.uhScores.length > 0 ? Math.round(s.uhScores.reduce((a, b) => a + b, 0) / s.uhScores.length) : 0;
     const uts = s.highestUTS;
     const uas = s.highestUAS;
-    const total = (kehadiran * 1/8) + (uh * 3/8) + (uts * 2/8) + (uas * 2/8);
+    const total = (kehadiran * wAtt/tw) + (uh * wUH/tw) + (uts * wUts/tw) + (uas * wUas/tw);
     const finalScore = Math.round(total * 10) / 10;
     const grade = finalScore >= 85 ? "A" : finalScore >= 75 ? "B+" : finalScore >= 65 ? "B" : finalScore >= 55 ? "C+" : finalScore >= 45 ? "C" : finalScore >= 35 ? "D" : "E";
 
@@ -561,12 +570,105 @@ function generateReport() {
   });
 
   reportSheet.autoResizeColumns(1, headers.length);
-  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2 };
+  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2, weights: { attendanceWeight: wAtt, ulanganHarianWeight: wUH, utsWeight: wUts, uasWeight: wUas, totalWeight: tw } };
 }
 
 function response(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function getStudentRoster() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const usersSheet = ss.getSheetByName("Users");
+  const roster = [];
+
+  // Read all registered users
+  const users = [];
+  if (usersSheet && usersSheet.getLastRow() > 1) {
+    const data = usersSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      users.push({
+        studentId: String(data[i][0] || "").trim(),
+        nis: String(data[i][1] || "").trim(),
+        nama: String(data[i][2] || "").trim(),
+        email: String(data[i][3] || "").trim(),
+        absen: String(data[i][4] || "").trim(),
+        kelas: String(data[i][5] || "").trim()
+      });
+    }
+  }
+
+  // Read Akumulasi Nilai Rapor for scores
+  const reportSheet = ss.getSheetByName("Akumulasi Nilai Rapor");
+  const reportData = {};
+  if (reportSheet && reportSheet.getLastRow() > 1) {
+    const data = reportSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const sid = String(data[i][0] || "").trim();
+      if (!sid) continue;
+      reportData[sid] = {
+        pertemuan: parseInt(data[i][5]) || 0,
+        avgAktivitas: parseInt(data[i][6]) || 0,
+        kehadiran: parseInt(data[i][7]) || 0,
+        uh: parseInt(data[i][8]) || 0,
+        uts: parseInt(data[i][9]) || 0,
+        uas: parseInt(data[i][10]) || 0,
+        nilaiAkhir: parseFloat(data[i][11]) || 0,
+        grade: String(data[i][12] || "N/A").trim()
+      };
+    }
+  }
+
+  // Count total activities per student from * - Aktivitas sheets
+  const actCounts = {};
+  const allSheets = ss.getSheets();
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (!name.includes(" - Aktivitas") || sheet.getLastRow() <= 1) return;
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const sid = String(data[i][7] || "").trim();
+      if (!sid) continue;
+      actCounts[sid] = (actCounts[sid] || 0) + 1;
+    }
+  });
+
+  users.forEach(u => {
+    const report = reportData[u.studentId] || {};
+    const totalActivities = actCounts[u.studentId] || 0;
+    const nilaiAkhir = report.nilaiAkhir || 0;
+    let statusAktivitas = "Belum Ada Aktivitas";
+    let emoji = "📭";
+    if (totalActivities >= 25) { statusAktivitas = "Sangat Aktif"; emoji = "🔥"; }
+    else if (totalActivities >= 15) { statusAktivitas = "Konsisten"; emoji = "✅"; }
+    else if (totalActivities >= 8) { statusAktivitas = "Aktif"; emoji = "📘"; }
+    else if (totalActivities >= 3) { statusAktivitas = "Kurang Konsisten"; emoji = "⚠️"; }
+    else if (totalActivities > 0) { statusAktivitas = "Minim"; emoji = "🟡"; }
+
+    roster.push({
+      studentId: u.studentId,
+      nama: u.nama,
+      nis: u.nis,
+      absen: u.absen,
+      kelas: u.kelas,
+      totalActivities: totalActivities,
+      statusAktivitas: statusAktivitas,
+      emoji: emoji,
+      logAktivitas: totalActivities + " aktivitas",
+      nilaiAkhir: nilaiAkhir,
+      grade: report.grade || "N/A",
+      kehadiran: report.kehadiran || 0,
+      uh: report.uh || 0,
+      uts: report.uts || 0,
+      uas: report.uas || 0
+    });
+  });
+
+  // Sort by nilaiAkhir descending
+  roster.sort((a, b) => b.nilaiAkhir - a.nilaiAkhir);
+
+  return { status: "ok", roster: roster, total: roster.length };
 }
 
 // --- FUNGSI TESTING ---

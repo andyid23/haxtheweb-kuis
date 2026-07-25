@@ -1434,7 +1434,8 @@ export class TransparentGradebook extends LitElement {
       _gradesConfig: { type: Object },
       _isLecturerMode: { type: Boolean },
       _scores: { type: Object },
-      _reportStatus: { type: String }
+      _reportStatus: { type: String },
+      _roster: { type: Array }
     };
   }
 
@@ -1450,6 +1451,7 @@ export class TransparentGradebook extends LitElement {
     this._isLecturerMode = false;
     this._scores = { ulanganHarian: { highest: 0 }, uts: { highest: 0 }, uas: { highest: 0 }, formatif: { count: 0 } };
     this._reportStatus = "";
+    this._roster = [];
   }
 
   connectedCallback() {
@@ -1463,6 +1465,7 @@ export class TransparentGradebook extends LitElement {
     window.addEventListener("a3-activity-logged", this._reloadHandler);
     window.addEventListener("a3-force-reload", this._reloadHandler);
     this._fetchScores();
+    this._fetchRoster();
   }
 
   disconnectedCallback() {
@@ -1490,17 +1493,36 @@ export class TransparentGradebook extends LitElement {
   _generateReport() {
     if (!this.appsScriptUrl) return;
     this._reportStatus = "Generating...";
-    const url = `${this.appsScriptUrl}?action=generateReport`;
+    const params = new URLSearchParams({
+      action: "generateReport",
+      attendanceWeight: this._gradesConfig.attendanceWeight || 1,
+      ulanganHarianWeight: this._gradesConfig.ulanganHarianWeight || 3,
+      utsWeight: this._gradesConfig.utsWeight || 2,
+      uasWeight: this._gradesConfig.uasWeight || 2
+    });
+    const url = `${this.appsScriptUrl}?${params.toString()}`;
     fetch(url, { redirect: "follow" })
       .then(r => r.json())
       .then(data => {
         this._reportStatus = data.status === "ok" ? `${data.message} (${data.totalSiswa} siswa)` : "Gagal generate";
+        this._fetchRoster();
         setTimeout(() => { this._reportStatus = ""; }, 6000);
       })
       .catch(() => {
         this._reportStatus = "Gagal menghubungi server";
         setTimeout(() => { this._reportStatus = ""; }, 6000);
       });
+  }
+
+  _fetchRoster() {
+    if (!this.appsScriptUrl) return;
+    const url = `${this.appsScriptUrl}?action=getStudentRoster`;
+    fetch(url, { redirect: "follow" })
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === "ok" && data.roster) this._roster = data.roster;
+      })
+      .catch(() => { this._roster = []; });
   }
 
   _getAttendanceScore() {
@@ -1532,18 +1554,25 @@ export class TransparentGradebook extends LitElement {
   }
 
   _getFinalScore() {
-    const tw = this._gradesConfig.totalWeight || 8;
-    const attScore = this._getAttendanceScore().overall;
+    // Auto-calculate totalWeight from actual weights (ignore stale stored value)
+    const wA = this._gradesConfig.attendanceWeight || 1;
+    const wU = this._gradesConfig.ulanganHarianWeight || 3;
+    const wT = this._gradesConfig.utsWeight || 2;
+    const wS = this._gradesConfig.uasWeight || 2;
+    const tw = wA + wU + wT + wS;
+
+    // Prefer server-side kehadiran when available
+    const attScore = this._scores.kehadiran || this._getAttendanceScore().overall;
     const uhScore = this._scores.ulanganHarian?.average || this._scores.ulanganHarian?.highest || 0;
     const utsScore = this._scores.uts?.highest || this._gradesConfig.uts || 0;
     const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
 
-    const wAtt = (this._gradesConfig.attendanceWeight || 1) / tw;
-    const wUH = (this._gradesConfig.ulanganHarianWeight || 3) / tw;
-    const wUts = (this._gradesConfig.utsWeight || 2) / tw;
-    const wUas = (this._gradesConfig.uasWeight || 2) / tw;
+    const wAttN = wA / tw;
+    const wUHN = wU / tw;
+    const wUtsN = wT / tw;
+    const wUasN = wS / tw;
 
-    const final = (attScore * wAtt) + (uhScore * wUH) + (utsScore * wUts) + (uasScore * wUas);
+    const final = (attScore * wAttN) + (uhScore * wUHN) + (utsScore * wUtsN) + (uasScore * wUasN);
     return Math.round(final * 10) / 10;
   }
 
@@ -1564,6 +1593,8 @@ export class TransparentGradebook extends LitElement {
     const val = parseInt(e.target.value);
     if (!isNaN(val)) {
       const updated = { ...this._gradesConfig, [key]: val };
+      // Auto-recalculate totalWeight
+      updated.totalWeight = (updated.attendanceWeight || 0) + (updated.ulanganHarianWeight || 0) + (updated.utsWeight || 0) + (updated.uasWeight || 0);
       localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(updated));
       this._gradesConfig = updated;
 
@@ -1809,14 +1840,11 @@ export class TransparentGradebook extends LitElement {
     const uasScore = this._scores.uas?.highest || this._gradesConfig.uas || 0;
     const finalScore = this._getFinalScore();
     const gradeLetter = this._getGradeLetter(finalScore);
-    const tw = this._gradesConfig.totalWeight || 8;
+    const tw = (this._gradesConfig.attendanceWeight || 1) + (this._gradesConfig.ulanganHarianWeight || 3) + (this._gradesConfig.utsWeight || 2) + (this._gradesConfig.uasWeight || 2);
     const uhCount = this._scores.ulanganHarian?.count || 0;
 
-    const mockStudents = [
-      { name: "Ahmad Dahlan", active: "Sangat Aktif", activities: 28, score: 92 },
-      { name: "Siti Rahma", active: "Konsisten", activities: 19, score: 86 },
-      { name: "Budi Santoso", active: "Aktif", activities: 14, score: 79 },
-      { name: "Dewi Lestari", active: "Kurang Konsisten", activities: 4, score: 58 }
+    const rosterData = this._roster.length > 0 ? this._roster : [
+      { nama: "Belum ada data", emoji: "📭", statusAktivitas: "Menunggu", logAktivitas: "0 aktivitas", nilaiAkhir: 0 }
     ];
 
     return html`
@@ -1975,7 +2003,7 @@ export class TransparentGradebook extends LitElement {
 
             <div class="simulated-roster-section">
               <div style="font-size: 12px; font-weight: bold; color: #6750a4; margin: 16px 0 8px;">
-                Diagnostik Realtime Anggota Kelas (Simulasi)
+                📋 Daftar Mahasiswa & Status Aktivitas (${this._roster.length} terdaftar)
               </div>
               <div class="table-wrapper">
                 <table style="font-size: 12px;">
@@ -1988,18 +2016,18 @@ export class TransparentGradebook extends LitElement {
                     </tr>
                   </thead>
                   <tbody>
-                    ${mockStudents.map(student => html`
+                    ${rosterData.map(s => html`
                       <tr>
-                        <td style="font-weight: 500;">${student.name}</td>
+                        <td style="font-weight: 500;">${s.nama}</td>
                         <td>
                           <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold;
-                                       background-color: ${student.activities >= 10 ? '#d1fae5' : '#fee2e2'};
-                                       color: ${student.activities >= 10 ? '#065f46' : '#991b1b'};">
-                            ${student.active}
+                                       background-color: ${s.nilaiAkhir >= 75 ? '#d1fae5' : s.nilaiAkhir >= 55 ? '#fef3c7' : '#fee2e2'};
+                                       color: ${s.nilaiAkhir >= 75 ? '#065f46' : s.nilaiAkhir >= 55 ? '#92400e' : '#991b1b'};">
+                            ${s.emoji || '📭'} ${s.statusAktivitas}
                           </span>
                         </td>
-                        <td>${student.activities} aktivitas</td>
-                        <td style="font-weight: bold; color: #6750a4;">${student.score}</td>
+                        <td>${s.logAktivitas}</td>
+                        <td style="font-weight: bold; color: #6750a4;">${s.nilaiAkhir}</td>
                       </tr>
                     `)}
                   </tbody>
