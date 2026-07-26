@@ -758,7 +758,7 @@ function getForumComments() {
   const comments = [];
   for (let i = 1; i < data.length; i++) {
     const action = String(data[i][7] || "post").trim();
-    if (action === "like") continue; // like actions are handled inline
+    if (action === "like") continue;
     comments.push({
       id: parseInt(data[i][1]) || 0,
       parentId: data[i][2] === "main" ? null : parseInt(data[i][2]) || null,
@@ -773,6 +773,20 @@ function getForumComments() {
       replies: []
     });
   }
+
+  // Lookup real names from Users sheet
+  const usersSheet = ss.getSheetByName("Users");
+  if (usersSheet && usersSheet.getLastRow() > 1) {
+    const ud = usersSheet.getDataRange().getValues();
+    const nameMap = {};
+    for (let i = 1; i < ud.length; i++) {
+      nameMap[String(ud[i][0])] = String(ud[i][2]);
+    }
+    comments.forEach(c => {
+      if (c.studentId && nameMap[c.studentId]) c.user = nameMap[c.studentId];
+    });
+  }
+
   return { status: "ok", comments: comments };
 }
 
@@ -799,7 +813,7 @@ function deleteForumComment(data) {
 function saveAssignment(data) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName("Tugas Log");
-  const headers = ["Timestamp", "StudentID", "Nama", "Sheet", "Title", "Content"];
+  const headers = ["Timestamp", "StudentID", "Nama", "Sheet", "Title", "Content", "Link"];
   if (!sheet) {
     sheet = ss.insertSheet("Tugas Log");
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -813,6 +827,7 @@ function saveAssignment(data) {
         String(allData[i][3]) === String(data.sheet || "") &&
         String(allData[i][4]) === String(data.title || "")) {
       sheet.getRange(i + 1, 6).setValue(data.content || "");
+      sheet.getRange(i + 1, 7).setValue(data.link || "");
       sheet.getRange(i + 1, 1).setValue(new Date());
       return { status: "ok", message: "Tugas diperbarui" };
     }
@@ -820,7 +835,7 @@ function saveAssignment(data) {
 
   sheet.appendRow([
     new Date(), data.studentId || "", data.name || "",
-    data.sheet || "", data.title || "", data.content || ""
+    data.sheet || "", data.title || "", data.content || "", data.link || ""
   ]);
 
   return { status: "ok", message: "Tugas tersimpan" };

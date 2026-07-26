@@ -67,6 +67,18 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
             description: "Mengacak urutan pilihan jawaban setiap kali kuis dimulai",
             inputMethod: "boolean",
           },
+          {
+            property: "hideAnswers",
+            title: "Sembunyikan Jawaban",
+            description: "Tidak menampilkan jawaban benar/salah setelah menjawab",
+            inputMethod: "boolean",
+          },
+          {
+            property: "hideConfetti",
+            title: "Nonaktifkan Confetti",
+            description: "Tidak menampilkan efek confetti saat jawaban benar",
+            inputMethod: "boolean",
+          },
         ],
         advanced: [],
         developer: [],
@@ -159,6 +171,8 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       sheetName: { type: String, attribute: "sheet-name" },
       quizCategory: { type: String, attribute: "quiz-category" },
       shuffleChoices: { type: Boolean, attribute: "shuffle-choices", reflect: true },
+      hideAnswers: { type: Boolean, attribute: "hide-answers", reflect: true },
+      hideConfetti: { type: Boolean, attribute: "hide-confetti", reflect: true },
       studentName: { type: String, attribute: "student-name" },
       studentId: { type: String, attribute: "student-id" },
       studentNis: { type: String, attribute: "student-nis" },
@@ -219,6 +233,8 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this.sheetName = "Pertemuan";
     this.quizCategory = "formatif";
     this.shuffleChoices = false;
+    this.hideAnswers = false;
+    this.hideConfetti = false;
     this.studentName = "";
     this.studentId = "";
     this.studentNis = "";
@@ -560,7 +576,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       ${q.choices.map((choice, index) => {
         let btnClass = "answer-btn";
         const isSelected = isMulti ? this._selectedAnswers.has(index) : index === this._selectedIndex;
-        if (this._answered) {
+        if (this._answered && !this.hideAnswers) {
           const correctIndices = q.correctAnswers || (q.correctIndex != null ? [q.correctIndex] : []);
           const mappedCorrect = q._correctMap || correctIndices;
           const isCorrectChoice = mappedCorrect.includes(index);
@@ -641,13 +657,17 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
     if (isCorrect) {
       this._score += (currentQuestion.points || 1);
-      this._feedbackText = this.t.feedbackCorrect;
-      this._feedbackPositive = true;
-      this._fireConfetti();
+      if (!this.hideAnswers) {
+        this._feedbackText = this.t.feedbackCorrect;
+        this._feedbackPositive = true;
+      }
+      if (!this.hideConfetti) this._fireConfetti();
     } else {
-      const correctNames = correctIndices.map(i => currentQuestion.choices[i]).join(", ");
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
-      this._feedbackPositive = false;
+      if (!this.hideAnswers) {
+        const correctNames = correctIndices.map(i => currentQuestion.choices[i]).join(", ");
+        this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
+        this._feedbackPositive = false;
+      }
     }
 
     // Schedule advance after delay
@@ -673,13 +693,17 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const isCorrect = correct.size === selected.size && [...correct].every(c => selected.has(c));
     if (isCorrect) {
       this._score += (q.points || 1);
-      this._feedbackText = this.t.feedbackCorrect;
-      this._feedbackPositive = true;
-      this._fireConfetti();
+      if (!this.hideAnswers) {
+        this._feedbackText = this.t.feedbackCorrect;
+        this._feedbackPositive = true;
+      }
+      if (!this.hideConfetti) this._fireConfetti();
     } else {
-      const correctNames = [...correct].map(i => q.choices[i]).join(", ");
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
-      this._feedbackPositive = false;
+      if (!this.hideAnswers) {
+        const correctNames = [...correct].map(i => q.choices[i]).join(", ");
+        this._feedbackText = `${this.t.feedbackWrongPrefix}${correctNames}`;
+        this._feedbackPositive = false;
+      }
     }
     setTimeout(() => this._advanceQuiz(), 1200);
   }
@@ -703,13 +727,17 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     }
     if (allCorrect) {
       this._score += (q.points || 1);
-      this._feedbackText = this.t.feedbackCorrect;
-      this._feedbackPositive = true;
-      this._fireConfetti();
+      if (!this.hideAnswers) {
+        this._feedbackText = this.t.feedbackCorrect;
+        this._feedbackPositive = true;
+      }
+      if (!this.hideConfetti) this._fireConfetti();
     } else {
-      const answerText = statements.map((s, i) => `${i + 1}: ${s.answer ? "Benar" : "Salah"}`).join(", ");
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${answerText}`;
-      this._feedbackPositive = false;
+      if (!this.hideAnswers) {
+        const answerText = statements.map((s, i) => `${i + 1}: ${s.answer ? "Benar" : "Salah"}`).join(", ");
+        this._feedbackText = `${this.t.feedbackWrongPrefix}${answerText}`;
+        this._feedbackPositive = false;
+      }
     }
     setTimeout(() => this._advanceQuiz(), 1200);
   }
@@ -728,13 +756,17 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     }
     if (allCorrect) {
       this._score += (q.points || 1);
-      this._feedbackText = this.t.feedbackCorrect;
-      this._feedbackPositive = true;
-      this._fireConfetti();
+      if (!this.hideAnswers) {
+        this._feedbackText = this.t.feedbackCorrect;
+        this._feedbackPositive = true;
+      }
+      if (!this.hideConfetti) this._fireConfetti();
     } else {
-      const correctText = Object.entries(correctPairs).map(([k, v]) => `${parseInt(k) + 1}→${String.fromCharCode(65 + v)}`).join(", ");
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${correctText}`;
-      this._feedbackPositive = false;
+      if (!this.hideAnswers) {
+        const correctText = Object.entries(correctPairs).map(([k, v]) => `${parseInt(k) + 1}→${String.fromCharCode(65 + v)}`).join(", ");
+        this._feedbackText = `${this.t.feedbackWrongPrefix}${correctText}`;
+        this._feedbackPositive = false;
+      }
     }
     setTimeout(() => this._advanceQuiz(), 1200);
   }
@@ -750,12 +782,16 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const isCorrect = accepted.some(a => text.includes(a));
     if (isCorrect) {
       this._score += (q.points || 1);
-      this._feedbackText = this.t.feedbackCorrect;
-      this._feedbackPositive = true;
-      this._fireConfetti();
+      if (!this.hideAnswers) {
+        this._feedbackText = this.t.feedbackCorrect;
+        this._feedbackPositive = true;
+      }
+      if (!this.hideConfetti) this._fireConfetti();
     } else {
-      this._feedbackText = `${this.t.feedbackWrongPrefix}${(q.acceptedAnswers || []).join(" / ")}`;
-      this._feedbackPositive = false;
+      if (!this.hideAnswers) {
+        this._feedbackText = `${this.t.feedbackWrongPrefix}${(q.acceptedAnswers || []).join(" / ")}`;
+        this._feedbackPositive = false;
+      }
     }
     setTimeout(() => this._advanceQuiz(), 1200);
   }
@@ -1343,10 +1379,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
           padding: var(--ddd-spacing-4);
           font-size: var(--ddd-font-size-m);
           font-weight: var(--ddd-font-weight-bold);
-          background: var(--ddd-theme-polaris-primary);
-          color: var(--ddd-theme-on-primary);
+          background: var(--ddd-theme-polaris-primary, #007bff);
+          color: var(--ddd-theme-on-primary, #fff);
           border: none;
-          border-radius: var(--ddd-radius-md);
+          border-radius: var(--ddd-radius-md, 8px);
           cursor: pointer;
           transition: background 0.2s;
         }
@@ -1408,10 +1444,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
           padding: var(--ddd-spacing-4) var(--ddd-spacing-5);
           font-size: var(--ddd-font-size-m);
           font-weight: var(--ddd-font-weight-medium);
-          background: var(--ddd-theme-polaris-surface);
-          color: var(--ddd-theme-on-surface);
-          border: 1px solid var(--ddd-theme-polaris-border);
-          border-radius: var(--ddd-radius-md);
+          background: var(--ddd-theme-polaris-surface, #fff);
+          color: var(--ddd-theme-on-surface, #333);
+          border: 1px solid var(--ddd-theme-polaris-border, #d1d5db);
+          border-radius: var(--ddd-radius-md, 8px);
           cursor: pointer;
           transition:
             background 0.2s,
@@ -1434,9 +1470,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
 
         .answer-btn--correct {
-          background: var(--ddd-theme-success);
-          color: var(--ddd-theme-on-success);
-          border-color: var(--ddd-theme-success);
+          background: var(--ddd-theme-success, #28a745) !important;
+          color: var(--ddd-theme-on-success, #fff) !important;
+          border-color: var(--ddd-theme-success, #28a745) !important;
         }
 
         .answer-btn--selected {
@@ -1447,9 +1483,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
 
         .answer-btn--wrong {
-          background: var(--ddd-theme-error);
-          color: var(--ddd-theme-on-error);
-          border-color: var(--ddd-theme-error);
+          background: var(--ddd-theme-error, #dc3545) !important;
+          color: var(--ddd-theme-on-error, #fff) !important;
+          border-color: var(--ddd-theme-error, #dc3545) !important;
         }
 
         .feedback-area {
@@ -1460,13 +1496,13 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
 
         .feedback-area.positive {
-          background: var(--ddd-theme-success);
-          color: var(--ddd-theme-on-success);
+          background: var(--ddd-theme-success, #d4edda);
+          color: var(--ddd-theme-on-success, #155724);
         }
 
         .feedback-area.negative {
-          background: var(--ddd-theme-error);
-          color: var(--ddd-theme-on-error);
+          background: var(--ddd-theme-error, #f8d7da);
+          color: var(--ddd-theme-on-error, #721c24);
         }
 
         /* Result Screen Styles */

@@ -69,7 +69,7 @@ class QuizUserAuth extends I18NMixin(DDDSuper(LitElement)) {
       this._absen = saved.absen || "";
       this._kelas = saved.kelas || "";
       // Defer verifySession to avoid Lit double-update warning
-      setTimeout(() => this._verifySession(), 0);
+      queueMicrotask(() => this._verifySession());
     } else {
       this._screen = "login";
     }

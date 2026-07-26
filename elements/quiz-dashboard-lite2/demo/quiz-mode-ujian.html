@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: Quiz Mode Ujian + Tugas Link + Forum Guru</title>
+  <script type="module" src="../quiz-dashboard-lite2.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/assignment-forum.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 20px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .info { background: #e8f4fd; border: 1px solid #b3d8f5; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+    .info code { background: #d1e8ff; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+    th { background: #f0f4f8; padding: 8px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-new { background: #d4edda; color: #155724; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    .stimulus-box { background: #f8f9fa; border-left: 4px solid #007bff; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 12px 0; line-height: 1.6; font-size: 1rem; text-align: justify; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Demo: Quiz Mode Ujian + Tugas Link + Forum Guru</h1>
+  <div class="info">
+    <strong>Fiturbaru v2:</strong><br>
+    <span class="tag tag-new">BARU</span> <code>hide-answers</code> — sembunyikan jawaban benar/salah<br>
+    <span class="tag tag-new">BARU</span> <code>hide-confetti</code> — nonaktifkan efek confetti<br>
+    <span class="tag tag-new">BARU</span> Tugas link Google Drive/Doc<br>
+    <span class="tag tag-new">BARU</span> Forum: nama dari sheet, downvote negatif, sort fix<br>
+    <span class="tag tag-fix">FIX</span> CSS fallback — tombol jawaban tetap terlihat tanpa DDD theme<br>
+    <span class="tag tag-fix">FIX</span> Lit warning — queueMicrotask
+  </div>
+
+  <!-- SOAL CONTOH: Stimulus Box -->
+  <div class="card">
+    <h2>📋 Contoh Tampilan Soal dengan Stimulus</h2>
+    <div class="stimulus-box">
+      <p>Bacalah teks berikut! Energi biomassa adalah energi yang dihasilkan dari bahan organik seperti limbah pertanian, sekam padi, dan jerami. Biomassa dapat diolah menjadi bahan bakar padat, cair, atau gas untuk memenuhi kebutuhan energi masyarakat pedesaan.</p>
+    </div>
+    <p style="font-size:12px;color:#888;margin-top:8px;">↑ Tampilan stimulus di atas menggunakan CSS: <code>.stimulus-box { line-height: 1.6; font-size: 1rem; text-align: justify; }</code></p>
+  </div>
+
+  <!-- QUIZ MODE UJIAN: hide-answers + hide-confetti -->
+  <div class="card">
+    <h2>📝 Quiz Mode Ujian (hide-answers + hide-confetti)</h2>
+    <p style="font-size:13px;color:#666;">Kuis tanpa menampilkan jawaban benar/salah dan tanpa confetti. Cocok untuk ujian akhir.</p>
+    <explode-quiz
+      id="quiz-ujian"
+      sheet-name="UTS"
+      quiz-category="uts"
+      hide-answers
+      hide-confetti
+      apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec"
+      editable="true"
+      questions='[
+        {"type":"mc","question":"Apa kepanjangan dari HTML?","choices":["HyperText Markup Language","High Text Machine Language","Home Tool Markup Language","Hyperlinks Text Markup"],"correctIndex":0,"points":2},
+        {"type":"mc","question":"Manakah yang merupakan framework CSS?","choices":["React","Tailwind CSS","Vue.js","Django"],"correctAnswers":[1,3],"points":3},
+        {"type":"pgk","question":"Tentukan Benar atau Salah:","statements":[{"text":"HTML5 mendukung elemen canvas","answer":true},{"text":"CSS hanya untuk warna teks","answer":false}],"points":2},
+        {"type":"matching","question":"Jodohkan teknologi:","leftItems":["HTML","CSS","JavaScript"],"rightItems":["Markup","Styling","Logic"],"correctPairs":{"0":1,"1":0,"2":2},"points":3},
+        {"type":"shortAnswer","question":"Apa singkatan CSS?","acceptedAnswers":["cascading style sheets","css"],"points":1}
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- QUIZ MODE NORMAL: dengan jawaban + confetti -->
+  <div class="card">
+    <h2>📝 Quiz Mode Latihan (dengan jawaban + confetti)</h2>
+    <p style="font-size:13px;color:#666;">Kuis dengan menampilkan jawaban benar/salah + confetti. Cocok untuk latihan.</p>
+    <explode-quiz
+      id="quiz-latihan"
+      sheet-name="Pertemuan 1"
+      quiz-category="formatif"
+      shuffle-choices
+      apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec"
+      editable="true"
+      questions='[
+        {"type":"mc","question":"Planet terdekat Matahari?","choices":["Venus","Bumi","Mars","Merkurius"],"correctIndex":3},
+        {"type":"mc","question":"Bahasa pemrograman browser?","choices":["Python","JavaScript","Java","C++"],"correctIndex":1,"points":2}
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- TUGAS DENGAN LINK -->
+  <div class="card">
+    <h2>📌 Tugas dengan Link Google Drive</h2>
+    <p style="font-size:13px;color:#666;">Siswa bisa mengisi jawaban + link file Google Drive/Doc.</p>
+    <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec"></quiz-user-auth>
+    <assignment-forum
+      id="af1"
+      assignment-title="Refleksi Energi Terbarukan"
+      assignment-instruction="Tuliskan refleksi + upload file ke Google Drive, lalu tempel link-nya di bawah."
+      forum-topik="Diskusi Materi Energi Terbarukan"
+      apps-script-url="https://script.google.com/macros/s/AKfycbwVv82kdqps9ZBG9hs5pI_2gZecv7Cx_fA9l_OFa3RI7R40jVPHfK8GO5LfGom5_P--/exec"
+      forum-api-url="URL_FORUM_TUGAS_GS_ANDA"
+      sheet-name="Pertemuan 1"
+      view-mode="lecturer">
+    </assignment-forum>
+  </div>
+
+  <!-- DOKUMENTASI PERUBAHAN -->
+  <div class="card">
+    <h2>📚 Dokumentasi Perubahan Kode</h2>
+
+    <h3>1. Quiz Properties Baru</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideAnswers</code></td><td><code>hide-answers</code></td><td>Boolean</td><td>false</td><td>Sembunyikan feedback benar/salah + highlight warna tombol</td></tr>
+        <tr><td><code>hideConfetti</code></td><td><code>hide-confetti</code></td><td>Boolean</td><td>false</td><td>Nonaktifkan efek confetti saat jawaban benar</td></tr>
+      </tbody>
+    </table>
+    <pre>&lt;explode-quiz hide-answers hide-confetti ...&gt;&lt;/explode-quiz&gt;</pre>
+
+    <h3>2. CSS Fallback (DDD Theme Independence)</h3>
+    <pre>/* Semua DDD variables punya fallback hardcoded */
+.answer-btn--correct { background: var(--ddd-theme-success, #28a745); }
+.answer-btn--wrong   { background: var(--ddd-theme-error, #dc3545); }
+.start-btn           { background: var(--ddd-theme-polaris-primary, #007bff); }
+.feedback-area.positive { background: var(--ddd-theme-success, #d4edda); }</pre>
+    <p style="font-size:12px;color:#888;">Tombol jawaban sekarang tetap terlihat meskipun host page tidak menginisialisasi DDD CSS variables.</p>
+
+    <h3>3. Tugas Link Google Drive</h3>
+    <table>
+      <thead><tr><th>Component</th><th>Perubahan</th></tr></thead>
+      <tbody>
+        <tr><td><code>assignment-forum</code></td><td>+input URL field, +_assignmentLink state, kirim ke Sheets</td></tr>
+        <tr><td><code>code.gs</code></td><td>Tugas Log +kolom "Link"</td></tr>
+        <tr><td><code>code-forum-tugas.gs</code></td><td>Tugas Log +kolom "Link"</td></tr>
+      </tbody>
+    </table>
+    <pre>&lt;input type="url" placeholder="Link Google Drive/Doc" /&gt;
+&lt;a href="${link}" target="_blank"&gt;🔗 Lihat File Tugas&lt;/a&gt;</pre>
+
+    <h3>4. Forum: Nama dari Sheet + Sort Fix + Downvote</h3>
+    <table>
+      <thead><tr><th>Perubahan</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td>Nama dari Users sheet</td><td><code>getForumComments()</code> lookup <code>studentId → nama</code> dari sheet Users</td></tr>
+        <tr><td>Sort fix</td><td><code>_setSort(mode)</code> + force <code>_comments = [...]</code> reference change</td></tr>
+        <tr><td>Downvote negatif</td><td>Hapus <code>Math.max(0,...)</code> — likes bisa minus, sync ke sheet</td></tr>
+        <tr><td>Guru delete</td><td><code>view-mode="lecturer"</code> → tampilkan 🗑️ Hapus</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5. Lit Warning Fix</h3>
+    <pre>// quiz-user-auth.js: setTimeout → queueMicrotask
+queueMicrotask(() => this._verifySession());</pre>
+    <p style="font-size:12px;color:#888;">Menghindari "Element scheduled an update after update completed" karena setTimeout menunda ke task terpisah.</p>
+  </div>
+
+  <!-- REFERENSI CSS STIMULUS -->
+  <div class="card">
+    <h2>🎨 Referensi CSS Stimulus Box</h2>
+    <pre>.stimulus-box {
+  background: #f8f9fa;
+  border-left: 4px solid #007bff;
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  margin: 12px 0;
+  line-height: 1.6;
+  font-size: 1rem;
+  text-align: justify;
+}
+:root {
+  --primary: #007bff;
+  --success: #28a745;
+  --bg-body: #f4f6f9;
+  --text-color: #333;
+}</pre>
+  </div>
+
+  <script type="module">
+    const auth = document.querySelector("#auth");
+    const af = document.querySelector("#af1");
+    auth.addEventListener("quiz-user-login", (e) => {
+      af.studentId = e.detail.studentId;
+      af.studentName = e.detail.nama;
+    });
+  </script>
+</body>
+</html>

@@ -17,6 +17,7 @@ export class AssignmentForum extends LitElement {
       _activeReplyId: { state: true },
       _sortMode: { state: true },
       _assignmentText: { state: true },
+      _assignmentLink: { state: true },
       _assignmentSubmitted: { state: true },
       _submitting: { state: true },
       viewMode: { type: String, attribute: "view-mode" },
@@ -37,6 +38,7 @@ export class AssignmentForum extends LitElement {
     this._sortMode = "best";
     this._assignmentText = localStorage.getItem("hax_assignment_text") || "";
     this._assignmentSubmitted = localStorage.getItem("hax_assignment_submitted") === "true";
+    this._assignmentLink = localStorage.getItem("hax_assignment_link") || "";
     this._submitting = false;
   }
 
@@ -158,6 +160,11 @@ export class AssignmentForum extends LitElement {
     return list;
   }
 
+  _setSort(mode) {
+    this._sortMode = mode;
+    this._comments = [...this._comments];
+  }
+
   async _submitMainComment() {
     if (this._submitting) return;
     const el = this.shadowRoot.querySelector("#main-input");
@@ -265,10 +272,11 @@ export class AssignmentForum extends LitElement {
     this._comments = this._comments.map(c => {
       if (c.id === commentId) {
         const isDisliked = !c.isDisliked;
-        return { ...c, isDisliked, likes: isDisliked ? Math.max(0, (c.likes || 0) - 1) : (c.likes || 0) + 1 };
+        return { ...c, isDisliked, likes: (c.likes || 0) + (isDisliked ? -1 : 1) };
       }
       return c;
     });
+    this._syncLike(commentId);
   }
 
   _syncLike(commentId) {
@@ -301,7 +309,8 @@ export class AssignmentForum extends LitElement {
           body: JSON.stringify({
             action: "saveAssignment",
             studentId: this.studentId, name: this.studentName,
-            sheet: this.sheetName, title: this.assignmentTitle, content: text
+            sheet: this.sheetName, title: this.assignmentTitle,
+            content: text, link: this._assignmentLink
           })
         });
       } catch (e) {
@@ -311,6 +320,7 @@ export class AssignmentForum extends LitElement {
 
     localStorage.setItem("hax_assignment_submitted", "true");
     localStorage.setItem("hax_assignment_text", text);
+    localStorage.setItem("hax_assignment_link", this._assignmentLink);
     this._assignmentSubmitted = true;
     this._submitting = false;
     this._sendActivity("assignment", `Tugas: ${this.assignmentTitle}`);
@@ -319,8 +329,10 @@ export class AssignmentForum extends LitElement {
   _resetAssignment() {
     localStorage.removeItem("hax_assignment_submitted");
     localStorage.removeItem("hax_assignment_text");
+    localStorage.removeItem("hax_assignment_link");
     this._assignmentSubmitted = false;
     this._assignmentText = "";
+    this._assignmentLink = "";
   }
 
   _exportAssignment() {
@@ -383,6 +395,11 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
         <h3>📝 ${this.assignmentTitle}</h3>
         <div class="meta">Formatif | Tugas Mandiri</div>
         <p style="margin:0 0 10px;font-size:13px;color:#4a5568;line-height:1.5;">${this.assignmentInstruction}</p>
+        <input type="url" placeholder="🔗 Link Google Drive / Google Doc (opsional)"
+          .value="${this._assignmentLink}"
+          @input="${e => { this._assignmentLink = e.target.value; }}"
+          ?disabled="${this._assignmentSubmitted}"
+          style="width:100%;padding:8px 12px;border:1px solid #dbdbdb;border-radius:8px;font-size:13px;margin-bottom:8px;box-sizing:border-box;">
         <textarea .value="${this._assignmentText}" @input="${(e) => { this._assignmentText = e.target.value; }}"
           ?disabled="${this._assignmentSubmitted}" placeholder="Tulis jawaban tugas Anda di sini..."></textarea>
         <div class="btn-group">
@@ -397,6 +414,7 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
         <div class="${this._assignmentSubmitted ? "badge-done" : "badge-pending"}">
           ${this._assignmentSubmitted ? "✅ Tugas Diserahkan & Tersimpan ke Google Sheets" : "⚠️ Belum Menyerahkan"}
         </div>
+        ${this._assignmentSubmitted && this._assignmentLink ? html`<div style="margin-top:8px;"><a href="${this._assignmentLink}" target="_blank" style="color:#002f6c;font-size:13px;text-decoration:underline;">🔗 Lihat File Tugas</a></div>` : ""}
       </div>
 
       <!-- FORUM (Disqus-style) -->
@@ -414,9 +432,9 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
 
         <!-- Sort tabs -->
         <div class="nav-sort">
-          <span class="sort-btn ${this._sortMode === "best" ? "active" : ""}" @click="${() => { this._sortMode = "best"; }}">Best</span>
-          <span class="sort-btn ${this._sortMode === "newest" ? "active" : ""}" @click="${() => { this._sortMode = "newest"; }}">Newest</span>
-          <span class="sort-btn ${this._sortMode === "oldest" ? "active" : ""}" @click="${() => { this._sortMode = "oldest"; }}">Oldest</span>
+          <span class="sort-btn ${this._sortMode === "best" ? "active" : ""}" @click="${() => this._setSort('best')}">Best</span>
+          <span class="sort-btn ${this._sortMode === "newest" ? "active" : ""}" @click="${() => this._setSort('newest')}">Newest</span>
+          <span class="sort-btn ${this._sortMode === "oldest" ? "active" : ""}" @click="${() => this._setSort('oldest')}">Oldest</span>
         </div>
 
         <!-- Comments -->
