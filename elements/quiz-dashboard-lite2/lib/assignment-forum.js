@@ -6,6 +6,7 @@ export class AssignmentForum extends LitElement {
   static get properties() {
     return {
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
+      forumApiUrl: { type: String, attribute: "forum-api-url" },
       sheetName: { type: String, attribute: "sheet-name" },
       studentId: { type: String, attribute: "student-id" },
       studentName: { type: String, attribute: "student-name" },
@@ -17,6 +18,8 @@ export class AssignmentForum extends LitElement {
       _sortMode: { state: true },
       _assignmentText: { state: true },
       _assignmentSubmitted: { state: true },
+      _submitting: { state: true },
+      viewMode: { type: String, attribute: "view-mode" },
     };
   }
 
@@ -34,11 +37,25 @@ export class AssignmentForum extends LitElement {
     this._sortMode = "best";
     this._assignmentText = localStorage.getItem("hax_assignment_text") || "";
     this._assignmentSubmitted = localStorage.getItem("hax_assignment_submitted") === "true";
+    this._submitting = false;
   }
 
   connectedCallback() {
     super.connectedCallback();
+
+    // Internal auth listener — catches quiz-user-login even if demo listener is missing
+    this._authHandler = (e) => {
+      if (e.detail.studentId) this.studentId = e.detail.studentId;
+      if (e.detail.nama) this.studentName = e.detail.nama;
+    };
+    window.addEventListener("quiz-user-login", this._authHandler);
+
     this._loadForumComments();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._authHandler) window.removeEventListener("quiz-user-login", this._authHandler);
   }
 
   static get styles() {
@@ -106,9 +123,10 @@ export class AssignmentForum extends LitElement {
   }
 
   async _loadForumComments() {
-    if (!this.appsScriptUrl) return;
+    const url = this.forumApiUrl || this.appsScriptUrl;
+    if (!url) return;
     try {
-      const res = await fetch(`${this.appsScriptUrl}?action=getForumComments`, { redirect: "follow" });
+      const res = await fetch(`${url}?action=getForumComments`, { redirect: "follow" });
       const data = await res.json();
       if (data.status === "ok" && data.comments) {
         this._comments = this._buildThread(data.comments);
@@ -141,9 +159,13 @@ export class AssignmentForum extends LitElement {
   }
 
   async _submitMainComment() {
+    if (this._submitting) return;
     const el = this.shadowRoot.querySelector("#main-input");
     const text = el.value.trim();
     if (!text) return;
+
+    this._submitting = true;
+    const url = this.forumApiUrl || this.appsScriptUrl;
 
     const payload = {
       action: "saveForumComment",
@@ -154,7 +176,7 @@ export class AssignmentForum extends LitElement {
     };
 
     try {
-      const res = await fetch(this.appsScriptUrl, {
+      const res = await fetch(url, {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
@@ -167,14 +189,20 @@ export class AssignmentForum extends LitElement {
       console.error("[assignment-forum] Submit failed:", e);
     }
 
+    this._submitting = false;
+
     this._sendActivity("discussion", `Forum: ${text.substring(0, 50)}`);
   }
 
   async _submitReply(parentId) {
+    if (this._submitting) return;
     const el = this.shadowRoot.querySelector(`#reply-${parentId}`);
     if (!el) return;
     const text = el.value.trim();
     if (!text) return;
+
+    this._submitting = true;
+    const url = this.forumApiUrl || this.appsScriptUrl;
 
     const payload = {
       action: "saveForumComment",
@@ -185,7 +213,7 @@ export class AssignmentForum extends LitElement {
     };
 
     try {
-      const res = await fetch(this.appsScriptUrl, {
+      const res = await fetch(url, {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(payload)
       });
@@ -200,7 +228,26 @@ export class AssignmentForum extends LitElement {
       console.error("[assignment-forum] Reply failed:", e);
     }
 
+    this._submitting = false;
+
     this._sendActivity("discussion", `Reply: ${text.substring(0, 50)}`);
+  }
+
+  async _deleteComment(commentId) {
+    if (!confirm("Hapus komentar ini?")) return;
+    const url = this.forumApiUrl || this.appsScriptUrl;
+    if (!url) return;
+    try {
+      await fetch(url, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "deleteForumComment", id: commentId })
+      });
+      // Remove from local state — also remove nested replies
+      this._comments = this._comments.filter(c => c.id !== commentId)
+        .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== commentId) }));
+    } catch (e) {
+      console.error("[assignment-forum] Delete failed:", e);
+    }
   }
 
   _handleLike(commentId) {
@@ -211,15 +258,28 @@ export class AssignmentForum extends LitElement {
       }
       return c;
     });
-    // Background sync to Sheets
-    if (this.appsScriptUrl) {
-      const c = this._comments.find(c => c.id === commentId);
-      if (c) {
-        fetch(this.appsScriptUrl, {
-          method: "POST", headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify({ action: "saveForumComment", id: commentId, actionType: "like", isLiked: c.isLiked })
-        }).catch(() => {});
+    this._syncLike(commentId);
+  }
+
+  _handleDislike(commentId) {
+    this._comments = this._comments.map(c => {
+      if (c.id === commentId) {
+        const isDisliked = !c.isDisliked;
+        return { ...c, isDisliked, likes: isDisliked ? Math.max(0, (c.likes || 0) - 1) : (c.likes || 0) + 1 };
       }
+      return c;
+    });
+  }
+
+  _syncLike(commentId) {
+    const likeUrl = this.forumApiUrl || this.appsScriptUrl;
+    if (!likeUrl) return;
+    const c = this._comments.find(c => c.id === commentId);
+    if (c) {
+      fetch(likeUrl, {
+        method: "POST", headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ action: "saveForumComment", id: commentId, actionType: "like", isLiked: c.isLiked })
+      }).catch(() => {});
     }
   }
 
@@ -228,12 +288,15 @@ export class AssignmentForum extends LitElement {
   }
 
   async _submitAssignment() {
+    if (this._submitting) return;
     const text = this._assignmentText.trim();
     if (!text) { alert("Isi tugas terlebih dahulu!"); return; }
 
-    if (this.appsScriptUrl) {
+    this._submitting = true;
+    const tugasUrl = this.forumApiUrl || this.appsScriptUrl;
+    if (tugasUrl) {
       try {
-        await fetch(this.appsScriptUrl, {
+        await fetch(tugasUrl, {
           method: "POST", headers: { "Content-Type": "text/plain" },
           body: JSON.stringify({
             action: "saveAssignment",
@@ -249,6 +312,7 @@ export class AssignmentForum extends LitElement {
     localStorage.setItem("hax_assignment_submitted", "true");
     localStorage.setItem("hax_assignment_text", text);
     this._assignmentSubmitted = true;
+    this._submitting = false;
     this._sendActivity("assignment", `Tugas: ${this.assignmentTitle}`);
   }
 
@@ -274,14 +338,23 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
   }
 
   _sendActivity(type, description) {
-    if (!this.appsScriptUrl || !this.studentId) return;
-    const params = new URLSearchParams({
-      action: "activity", activityType: type, description,
-      name: this.studentName, studentId: this.studentId,
-      sheet: this.sheetName, timestamp: new Date().toISOString(),
-    });
-    fetch(`${this.appsScriptUrl}?${params.toString()}`, { redirect: "follow" }).catch(() => {});
-    window.dispatchEvent(new CustomEvent("a3-activity-logged", { bubbles: true, composed: true }));
+    // Always dispatch event for activity-logger (localStorage tracking)
+    const eventName = type === "assignment" ? "assignment-saved" : "discussion-saved";
+    window.dispatchEvent(new CustomEvent(eventName, {
+      detail: { title: this.assignmentTitle, thread: this.forumTopic, studentId: this.studentId },
+      bubbles: true, composed: true
+    }));
+
+    // Also send to Google Sheets if configured
+    const url = this.appsScriptUrl;
+    if (url && this.studentId) {
+      const params = new URLSearchParams({
+        action: "activity", activityType: type, description,
+        name: this.studentName, studentId: this.studentId,
+        sheet: this.sheetName, timestamp: new Date().toISOString(),
+      });
+      fetch(`${url}?${params.toString()}`, { redirect: "follow" }).catch(() => {});
+    }
   }
 
   _timeAgo(isoStr) {
@@ -319,7 +392,7 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
               <button class="btn btn-primary btn-sm" @click="${this._exportAssignment}">📥 Ekspor HTML</button>
               <button class="btn btn-danger btn-sm" @click="${this._resetAssignment}">🔄 Ubah</button>
             `
-            : html`<button class="btn btn-success" @click="${this._submitAssignment}">Kirim & Kunci Tugas</button>`}
+            : html`<button class="btn btn-success" ?disabled="${this._submitting}" @click="${this._submitAssignment}">${this._submitting ? "⏳ Mengirim..." : "Kirim & Kunci Tugas"}</button>`}
         </div>
         <div class="${this._assignmentSubmitted ? "badge-done" : "badge-pending"}">
           ${this._assignmentSubmitted ? "✅ Tugas Diserahkan & Tersimpan ke Google Sheets" : "⚠️ Belum Menyerahkan"}
@@ -335,7 +408,7 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
           <div class="avatar">👤</div>
           <div class="input-wrapper">
             <textarea id="main-input" class="input-box" rows="2" placeholder="Tulis komentar..."></textarea>
-            <button class="btn-submit" @click="${this._submitMainComment}">Post Comment</button>
+            <button class="btn-submit" ?disabled="${this._submitting}" @click="${this._submitMainComment}">${this._submitting ? "Posting..." : "Post Comment"}</button>
           </div>
         </div>
 
@@ -362,14 +435,15 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
                 <span class="action-btn ${c.isLiked ? "liked" : ""}" @click="${() => this._handleLike(c.id)}">
                   🔺 ${c.likes || 0}
                 </span>
-                <span class="action-btn">🔻</span>
+                <span class="action-btn" @click="${() => this._handleDislike(c.id)}">🔻</span>
                 <span class="action-btn" @click="${() => this._toggleReply(c.id)}">Reply</span>
+                ${this.viewMode === "lecturer" ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(c.id)}">🗑️ Hapus</span>` : ""}
               </div>
 
               ${this._activeReplyId === c.id ? html`
                 <div class="reply-form-box">
                   <input id="reply-${c.id}" class="reply-input" type="text" placeholder="Tulis balasan...">
-                  <button class="btn-submit" style="font-size:12px;padding:6px 12px;" @click="${() => this._submitReply(c.id)}">Reply</button>
+                  <button class="btn-submit" style="font-size:12px;padding:6px 12px;" ?disabled="${this._submitting}" @click="${() => this._submitReply(c.id)}">${this._submitting ? "..." : "Reply"}</button>
                 </div>
               ` : ""}
 
@@ -384,6 +458,11 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
                           <span class="time-stamp">${this._timeAgo(r.time)}</span>
                         </div>
                         <div class="text-comment" style="font-size:13px;">${r.text}</div>
+                        <div class="action-bar" style="margin-top:4px;">
+                          <span class="action-btn" @click="${() => this._handleLike(r.id)}">🔺 ${r.likes || 0}</span>
+                          <span class="action-btn" @click="${() => this._handleDislike(r.id)}">🔻</span>
+                          ${this.viewMode === "lecturer" ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(r.id)}">🗑️ Hapus</span>` : ""}
+                        </div>
                       </div>
                     </div>
                   `)}

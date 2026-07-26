@@ -199,6 +199,8 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       _selectedAnswers: { state: true },
       _matchAnswers: { state: true },
       _shortAnswerText: { state: true },
+      _tempQuestionPoints: { state: true },
+      _maxPoints: { state: true },
     };
   }
 
@@ -255,6 +257,8 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempCorrectPairs = {};
     this._tempAcceptedAnswers = "";
     this._tempAcceptedStatements = "[]";
+    this._maxPoints = 0;
+    this._tempQuestionPoints = 1;
     this.t = {
       quizTitle: "Kuis Interaktif",
       quizInstruction: "Masukkan nama Anda untuk memulai kuis.",
@@ -340,6 +344,16 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
   connectedCallback() {
     super.connectedCallback();
+
+    // Internal auth listener — catches quiz-user-login even if demo listener is missing
+    this._authHandler = (e) => {
+      if (e.detail.studentId) this.studentId = e.detail.studentId;
+      if (e.detail.nama) this.studentName = e.detail.nama;
+      if (e.detail.nis) this.studentNis = e.detail.nis;
+      if (e.detail.absen) this.studentAbsen = e.detail.absen;
+      if (e.detail.kelas) this.studentKelas = e.detail.kelas;
+    };
+    window.addEventListener("quiz-user-login", this._authHandler);
 
     // HAXcms autoloader integration: register with HAXStore element tray
     if (
@@ -434,6 +448,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     } catch (err) {
       console.error("[explode-quiz] Mega konfeti gagal dieksekusi:", err);
     }
+  }
+
+  _getMaxPoints() {
+    return (this.questions || []).reduce((sum, q) => sum + (q.points || 1), 0);
   }
 
   _shuffleArray(arr) {
@@ -541,18 +559,23 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     return html`<div class="answer-grid">
       ${q.choices.map((choice, index) => {
         let btnClass = "answer-btn";
+        const isSelected = isMulti ? this._selectedAnswers.has(index) : index === this._selectedIndex;
         if (this._answered) {
           const correctIndices = q.correctAnswers || (q.correctIndex != null ? [q.correctIndex] : []);
           const mappedCorrect = q._correctMap || correctIndices;
           const isCorrectChoice = mappedCorrect.includes(index);
           if (isCorrectChoice) btnClass += " answer-btn--correct";
-          else if (this._selectedAnswers.has(index) || index === this._selectedIndex) btnClass += " answer-btn--wrong";
+          else if (isSelected) btnClass += " answer-btn--wrong";
+        } else if (isMulti && isSelected) {
+          btnClass += " answer-btn--selected";
+        } else if (!isMulti && isSelected) {
+          btnClass += " answer-btn--selected";
         }
         return html`<button class="${btnClass}" ?disabled="${this._answered}"
           @click="${() => isMulti ? this._toggleMultiAnswer(index) : this._selectAnswer(index)}"
-          aria-label="${this.t.ariaAnswerButton}: ${choice}">${choice}</button>`;
+          aria-label="${this.t.ariaAnswerButton}: ${choice}">${isMulti && isSelected ? "✓ " : ""}${choice}</button>`;
       })}
-      ${isMulti && !this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitMultiAnswers()}">Kirim Jawaban</button>` : ""}
+      ${isMulti && !this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitMultiAnswers()}">Kirim Jawaban (${this._selectedAnswers.size} dipilih)</button>` : ""}
     </div>`;
   }
 
@@ -617,7 +640,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const isCorrect = correctIndices.includes(choiceIndex);
 
     if (isCorrect) {
-      this._score += 1;
+      this._score += (currentQuestion.points || 1);
       this._feedbackText = this.t.feedbackCorrect;
       this._feedbackPositive = true;
       this._fireConfetti();
@@ -649,7 +672,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const selected = this._selectedAnswers;
     const isCorrect = correct.size === selected.size && [...correct].every(c => selected.has(c));
     if (isCorrect) {
-      this._score += 1;
+      this._score += (q.points || 1);
       this._feedbackText = this.t.feedbackCorrect;
       this._feedbackPositive = true;
       this._fireConfetti();
@@ -679,7 +702,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       if (this._matchAnswers[i] !== correctAnswers[i]) { allCorrect = false; break; }
     }
     if (allCorrect) {
-      this._score += 1;
+      this._score += (q.points || 1);
       this._feedbackText = this.t.feedbackCorrect;
       this._feedbackPositive = true;
       this._fireConfetti();
@@ -704,7 +727,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       if (this._matchAnswers[i] !== correctPairs[i]) { allCorrect = false; break; }
     }
     if (allCorrect) {
-      this._score += 1;
+      this._score += (q.points || 1);
       this._feedbackText = this.t.feedbackCorrect;
       this._feedbackPositive = true;
       this._fireConfetti();
@@ -726,7 +749,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const accepted = (q.acceptedAnswers || []).map(a => a.toLowerCase());
     const isCorrect = accepted.some(a => text.includes(a));
     if (isCorrect) {
-      this._score += 1;
+      this._score += (q.points || 1);
       this._feedbackText = this.t.feedbackCorrect;
       this._feedbackPositive = true;
       this._fireConfetti();
@@ -745,14 +768,15 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       this._selectedIndex = -1;
       this._feedbackText = "";
       this._feedbackPositive = false;
-      this._selectedAnswers = new Set();
-      this._matchAnswers = {};
-      this._shortAnswerText = "";
+    this._selectedAnswers = new Set();
+    this._matchAnswers = {};
+    this._shortAnswerText = "";
+    this._maxPoints = this._getMaxPoints();
     } else {
       this._submitToSheets(this._studentName, this._score);
       
       // Always dispatch quiz-saved event for activity tracking
-      const percentage = Math.round((this._score / this.questions.length) * 100);
+      const percentage = Math.round((this._score / this._maxPoints) * 100);
       this.dispatchEvent(new CustomEvent("quiz-saved", {
         detail: { name: this._studentName, score: percentage },
         bubbles: true,
@@ -761,14 +785,14 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       
       this._screen = "result";
       // Trigger confetti if score >= 80%
-      if (this._score / this.questions.length >= 0.8) {
+      if (this._score / this._maxPoints >= 0.8) {
         this._fireConfetti();
       }
     }
   }
 
   _renderResultScreen() {
-    const percentage = Math.round((this._score / this.questions.length) * 100);
+    const percentage = Math.round((this._score / this._maxPoints) * 100);
     let message = this.t.messageLow;
 
     if (percentage >= 80) {
@@ -782,7 +806,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
       <div class="result-name">${this.t.resultName}: ${this._studentName}</div>
       <div class="result-score">
-        ${this.t.resultScore}: ${this._score} / ${this.questions.length}
+        ${this.t.resultScore}: ${this._score} / ${this._maxPoints} poin
       </div>
       <div class="result-percentage">
         ${this.t.resultPercentage}: ${percentage}%
@@ -832,7 +856,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   }
 
   _submitToSheets(name, score) {
-    const percentage = Math.round((score / this.questions.length) * 100);
+    const percentage = Math.round((score / this._maxPoints) * 100);
 
     // Priority 1: Use Apps Script URL directly (no backend needed!)
     if (this.appsScriptUrl) {
@@ -844,6 +868,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         name: name,
         score: percentage,
         totalQuestions: this.questions.length,
+        totalPoints: this._maxPoints,
         timestamp: new Date().toISOString(),
         sheet: this.sheetName || "Pertemuan",
         studentId: this.studentId || "",
@@ -964,7 +989,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
       <div class="editor-content">
         <form class="add-question-form">
-          <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
             <select style="padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;" .value="${qType}" @change="${(e) => { this._tempQuestionType = e.target.value; }}">
               <option value="mc">Pilihan Ganda</option>
               <option value="pgk">PG Kompleks (Benar/Salah)</option>
@@ -974,6 +999,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
             <input type="text" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
               placeholder="URL gambar (opsional)" .value="${this._tempQuestionImage}"
               @input="${(e) => { this._tempQuestionImage = e.target.value; }}">
+            <label style="font-size:12px;color:#555;white-space:nowrap;">Poin:</label>
+            <input type="number" min="1" style="width:50px;padding:6px;border-radius:6px;border:1px solid #ccc;font-size:13px;text-align:center;"
+              .value="${this._tempQuestionPoints}" @input="${(e) => { this._tempQuestionPoints = parseInt(e.target.value) || 1; }}">
           </div>
           ${this._tempQuestionImage ? html`<div style="text-align:center;margin:8px 0;"><img src="${this._tempQuestionImage}" style="max-width:200px;border-radius:6px;border:1px solid #ddd;"></div>` : ""}
 
@@ -1005,6 +1033,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
                     <input type="text" style="flex:1;padding:6px 10px;border-radius:6px;border:1px solid #ccc;font-size:13px;"
                       placeholder="URL gambar" .value="${this._tempQuestionImage}"
                       @input="${(e) => { this._tempQuestionImage = e.target.value; }}">
+                    <label style="font-size:12px;color:#555;white-space:nowrap;">Poin:</label>
+                    <input type="number" min="1" style="width:50px;padding:6px;border-radius:6px;border:1px solid #ccc;font-size:13px;text-align:center;"
+                      .value="${this._tempQuestionPoints}" @input="${(e) => { this._tempQuestionPoints = parseInt(e.target.value) || 1; }}">
                   </div>
                   <textarea class="edit-question-text-input" .value="${this._tempQuestionText}"
                     @input="${(e) => (this._tempQuestionText = e.target.value)}"
@@ -1023,6 +1054,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
                   <div>
                     <strong style="color:#6750a4;">[${(question.type || "mc").toUpperCase()}]</strong> ${question.question}
                     ${question.image ? html`<span style="font-size:11px;color:#888;">[gambar]</span>` : ""}
+                    <span style="font-size:11px;color:#059669;font-weight:bold;">[${question.points || 1} poin]</span>
                   </div>
                   <div style="display:flex;gap:6px;">
                     <button class="edit-btn" @click="${() => this._startEditQuestion(index)}">${this.t.editQuestionBtn}</button>
@@ -1125,6 +1157,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const newQuestion = { type: qType, question: this._tempQuestionText.trim() };
 
     if (this._tempQuestionImage.trim()) newQuestion.image = this._tempQuestionImage.trim();
+    if (this._tempQuestionPoints > 1) newQuestion.points = this._tempQuestionPoints;
 
     if (qType === "mc") {
       if (!this._tempChoice0.trim() || !this._tempChoice1.trim()) { console.warn(this.t.emptyChoiceError); return; }
@@ -1156,7 +1189,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempQuestionText = "";
     this._tempChoice0 = ""; this._tempChoice1 = ""; this._tempChoice2 = ""; this._tempChoice3 = "";
     this._tempCorrectIndex = "0"; this._tempCorrectAnswers = [];
-    this._tempQuestionImage = ""; this._tempQuestionType = "mc";
+    this._tempQuestionImage = ""; this._tempQuestionType = "mc"; this._tempQuestionPoints = 1;
     this._tempLeftItems = ["", ""]; this._tempRightItems = ["", ""];
     this._tempCorrectPairs = {}; this._tempAcceptedAnswers = "";
     this._tempAcceptedStatements = "[]";
@@ -1169,6 +1202,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempQuestionText = q.question;
     this._tempQuestionImage = q.image || "";
     this._tempQuestionType = q.type || "mc";
+    this._tempQuestionPoints = q.points || 1;
     this._tempChoice0 = (q.choices || [])[0] || "";
     this._tempChoice1 = (q.choices || [])[1] || "";
     this._tempChoice2 = (q.choices || [])[2] || "";
@@ -1189,6 +1223,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const qType = this._tempQuestionType || "mc";
     const updated = { type: qType, question: this._tempQuestionText.trim() };
     if (this._tempQuestionImage.trim()) updated.image = this._tempQuestionImage.trim();
+    if (this._tempQuestionPoints > 1) updated.points = this._tempQuestionPoints;
 
     if (qType === "mc") {
       updated.choices = [this._tempChoice0.trim(), this._tempChoice1.trim(), this._tempChoice2.trim(), this._tempChoice3.trim()].filter(c => c);
@@ -1402,6 +1437,13 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
           background: var(--ddd-theme-success);
           color: var(--ddd-theme-on-success);
           border-color: var(--ddd-theme-success);
+        }
+
+        .answer-btn--selected {
+          background: #e3d9fc !important;
+          color: #6750a4 !important;
+          border-color: #6750a4 !important;
+          box-shadow: 0 0 0 2px rgba(103, 80, 164, 0.3);
         }
 
         .answer-btn--wrong {
@@ -1828,8 +1870,13 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
       `,
     ];
+    }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this._authHandler) window.removeEventListener("quiz-user-login", this._authHandler);
   }
-}
+  }
 
 globalThis.customElements.define(ExplodeQuiz.tag, ExplodeQuiz);
 

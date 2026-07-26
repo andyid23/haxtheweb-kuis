@@ -211,6 +211,7 @@ export class ActivityLogger extends LitElement {
     window.addEventListener("quiz-saved", this._handleQuizSaved);
     window.addEventListener("discussion-saved", this._handleDiscussionSaved);
     window.addEventListener("assignment-saved", this._handleAssignmentSaved);
+    window.addEventListener("reading-saved", this._handleReadingSaved);
     window.addEventListener("a3-force-reload", () => {
       this._logs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
     });
@@ -222,6 +223,7 @@ export class ActivityLogger extends LitElement {
     window.removeEventListener("quiz-saved", this._handleQuizSaved);
     window.removeEventListener("discussion-saved", this._handleDiscussionSaved);
     window.removeEventListener("assignment-saved", this._handleAssignmentSaved);
+    window.removeEventListener("reading-saved", this._handleReadingSaved);
     super.disconnectedCallback();
   }
 
@@ -274,6 +276,11 @@ export class ActivityLogger extends LitElement {
     const title = e.detail?.title || e.detail?.assignment || "Tugas";
     const category = e.detail?.category || "mandiri/terstruktur";
     this.logActivity("assignment", `Mengumpulkan tugas ${category}: ${title}`);
+  }
+
+  _handleReadingSaved(e) {
+    const title = e.detail?.title || e.detail?.module || "Materi";
+    this.logActivity("reading", `Membaca materi: ${title}`);
   }
 
   logActivity(type, description) {

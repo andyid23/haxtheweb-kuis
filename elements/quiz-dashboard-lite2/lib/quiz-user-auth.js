@@ -68,7 +68,8 @@ class QuizUserAuth extends I18NMixin(DDDSuper(LitElement)) {
       this._nis = saved.nis || "";
       this._absen = saved.absen || "";
       this._kelas = saved.kelas || "";
-      this._verifySession();
+      // Defer verifySession to avoid Lit double-update warning
+      setTimeout(() => this._verifySession(), 0);
     } else {
       this._screen = "login";
     }
