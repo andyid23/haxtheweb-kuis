@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo v5: Gradebook Default + Tab Order + DDD Question Text</title>
+  <script type="module" src="../quiz-dashboard-lite2.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 20px; border-bottom: 3px solid #002f6c; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .info { background: #e8f4fd; border: 1px solid #b3d8f5; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+    .info code { background: #d1e8ff; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    .tag-new { background: #d4edda; color: #155724; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Demo v5: Gradebook Default + Tab Order + DDD Question Text</h1>
+  <div class="info">
+    <strong>Fitur v5:</strong><br>
+    <span class="tag tag-new">BARU</span> Dashboard pass <code>show-after-quiz</code> ke <code>transparent-gradebook</code> by default<br>
+    <span class="tag tag-new">BARU</span> Tab order: <code>Panduan → Kuis → Aktivitas → Nilai</code><br>
+    <span class="tag tag-fix">FIX</span> <code>quizTabHidden</code> tetap <code>true</code> default<br>
+    <span class="tag tag-fix">FIX</span> <code>.question-text</code> pakai DDD variables dengan fallback hardcoded<br>
+  </div>
+
+  <div class="card">
+    <h2>📊 Contoh 1: Dashboard v5</h2>
+    <p style="font-size:13px;color:#666;">Gradebook tetap dirender dan otomatis tunggu event kuis selesai. Tab urutan tetap konsisten.</p>
+    <quiz-dashboard-lite2
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
+      sheet-name="Pertemuan 1"
+      view-mode="student"
+      quiz-tab-hidden="true">
+    </quiz-dashboard-lite2>
+  </div>
+
+  <div class="card">
+    <h2>📚 Catatan v5</h2>
+    <pre>// quiz-dashboard-lite2.js
+&lt;transparent-gradebook
+  .appsScriptUrl="${this.appsScriptUrl}"
+  .studentId="${this._user?.studentId || ''}"
+  .studentName="${this._user?.nama || ''}"
+  .viewMode="${this.viewMode}"
+  .showAfterQuiz="${true}"&gt;
+&lt;/transparent-gradebook&gt;
+
+// lib/explode-quiz.js
+.question-text {
+  font-size: var(--ddd-font-size-m, 1rem);
+  font-weight: var(--ddd-font-weight-regular, normal);
+  line-height: var(--ddd-line-height, 1.6);
+  color: var(--ddd-theme-on-surface, #333);
+  background: var(--ddd-theme-polaris-surface-hover, #f8f9fa);
+  border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
+  padding: var(--ddd-spacing-4, 14px) var(--ddd-spacing-5, 18px);
+}</pre>
+  </div>
+</body>
+</html>

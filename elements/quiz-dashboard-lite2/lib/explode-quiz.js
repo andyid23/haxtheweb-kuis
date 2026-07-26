@@ -1464,14 +1464,14 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
 
         .question-text {
-          font-size: 1rem;
-          font-weight: normal;
-          line-height: 1.6;
+          font-size: var(--ddd-font-size-m, 1rem);
+          font-weight: var(--ddd-font-weight-regular, normal);
+          line-height: var(--ddd-line-height, 1.6);
           text-align: justify;
           color: var(--ddd-theme-on-surface, #333);
-          background: #f8f9fa;
+          background: var(--ddd-theme-polaris-surface-hover, #f8f9fa);
           border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
-          padding: 14px 18px;
+          padding: var(--ddd-spacing-4, 14px) var(--ddd-spacing-5, 18px);
           border-radius: 0 8px 8px 0;
           margin-bottom: var(--ddd-spacing-6, 24px);
         }

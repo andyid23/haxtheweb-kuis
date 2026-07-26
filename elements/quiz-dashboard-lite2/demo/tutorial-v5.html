@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial v5 — Dashboard Default + Tab Order + DDD Fallback</title>
+  <style>
+    body { padding: 24px; max-width: 960px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 22px; border-bottom: 3px solid #002f6c; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    h3 { color: #555; font-size: 14px; margin-top: 16px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    .tag-new { background: #d4edda; color: #155724; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+    th { background: #f0f4f8; padding: 8px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+  </style>
+</head>
+<body>
+  <h1>📚 Tutorial v5 — Dashboard Default + Tab Order + DDD Fallback</h1>
+  <p style="color:#666;font-size:13px;">Quiz Dashboard Lite2 — 27 Juli 2026</p>
+
+  <div class="card">
+    <h3>Ringkasan v5</h3>
+    <table>
+      <thead><tr><th>Type</th><th>Item</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-new">BARU</span></td><td>Gradebook default ikut <code>show-after-quiz</code></td><td>✅ Passed from dashboard</td></tr>
+        <tr><td><span class="tag tag-new">BARU</span></td><td>Tab order dashboard</td><td>✅ Panduan → Kuis → Aktivitas → Nilai</td></tr>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td><code>quizTabHidden</code> default</td><td>✅ Tetap <code>true</code></td></tr>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td><code>.question-text</code> pakai DDD vars</td><td>✅ Fallback hardcoded tersedia</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Fix 1: Gradebook default</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;">Dashboard sekarang selalu pass <code>show-after-quiz</code> ke <code>transparent-gradebook</code>, jadi perilaku tunggu kuis jalan tanpa setup tambahan.</p>
+    <pre>&lt;transparent-gradebook
+  .appsScriptUrl="${this.appsScriptUrl}"
+  .studentId="${this._user?.studentId || ''}"
+  .studentName="${this._user?.nama || ''}"
+  .viewMode="${this.viewMode}"
+  .showAfterQuiz="${true}"&gt;
+&lt;/transparent-gradebook&gt;</pre>
+  </div>
+
+  <h2>Fix 2: Tab order</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;">Urutan tab dipertahankan walau kuis disembunyikan: <code>Panduan</code> → <code>Kuis</code> → <code>Aktivitas</code> → <code>Nilai</code>.</p>
+    <pre>&lt;div class="tab-container"&gt;
+  &lt;button&gt;Panduan&lt;/button&gt;
+  &lt;button&gt;Kuis&lt;/button&gt;
+  &lt;button&gt;Aktivitas&lt;/button&gt;
+  &lt;button&gt;Nilai&lt;/button&gt;
+&lt;/div&gt;</pre>
+  </div>
+
+  <h2>Fix 3: Question text styling</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;">`lib/explode-quiz.js` sekarang pakai DDD tokens dulu, lalu fallback hardcoded kalau token belum ada.</p>
+    <pre>.question-text {
+  font-size: var(--ddd-font-size-m, 1rem);
+  font-weight: var(--ddd-font-weight-regular, normal);
+  line-height: var(--ddd-line-height, 1.6);
+  color: var(--ddd-theme-on-surface, #333);
+  background: var(--ddd-theme-polaris-surface-hover, #f8f9fa);
+  border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
+  padding: var(--ddd-spacing-4, 14px) var(--ddd-spacing-5, 18px);
+  border-radius: 0 8px 8px 0;
+  margin-bottom: var(--ddd-spacing-6, 24px);
+}</pre>
+  </div>
+
+  <h2>Properties</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Property</th><th>Default v5</th><th>Catatan</th></tr></thead>
+      <tbody>
+        <tr><td><code>quizTabHidden</code></td><td><code>true</code></td><td>Tab kuis hidden default</td></tr>
+        <tr><td><code>showAfterQuiz</code></td><td><code>true</code></td><td>Gradebook tunggu quiz-saved</td></tr>
+        <tr><td><code>viewMode</code></td><td><code>student</code></td><td>Mode mahasiswa default</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

@@ -1459,7 +1459,7 @@ export class TransparentGradebook extends LitElement {
     this.studentId = "";
     this.studentName = "";
     this.viewMode = "student";
-    this.showAfterQuiz = false;
+    this.showAfterQuiz = true;
     this.showAfterDate = "";
     this._quizCompleted = false;
     this._logs = getInitialLogs();

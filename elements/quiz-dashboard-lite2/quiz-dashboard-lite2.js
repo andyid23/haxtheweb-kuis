@@ -32,7 +32,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
     this.viewMode = "student";
-    this.quizTabHidden = false; // "student" atau "lecturer"
+    this.quizTabHidden = true; // "student" atau "lecturer"
     this._user = null;
     this._spreadsheetId = "";
     this._activeTab = 0;
@@ -45,6 +45,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
       tabQuiz: "📝 Ambil Kuis",
       tabAttendance: "📅 Kehadiran & Aktivitas",
       tabGuide: "📖 Panduan",
+      tabNilai: "📊 Daftar Nilai",
       welcome: "Selamat datang",
       dataRecorded: "Data kuis & aktivitas akan tercatat atas nama Anda"
     };
@@ -196,11 +197,12 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
       <!-- Auth Component -->
       <quiz-user-auth .appsScriptUrl="${this.appsScriptUrl}"></quiz-user-auth>
 
-      <!-- Tabs -->
+      <!-- Tabs: Panduan → Ambil Kuis → Aktivitas → Daftar Nilai -->
       <div class="tab-container">
-        ${!this.quizTabHidden ? html`<button class="tab-btn ${this._activeTab === 0 ? 'active' : ''}" @click="${() => this._activeTab = 0}">${this.t.tabQuiz}</button>` : ""}
-        <button class="tab-btn ${this._activeTab === 1 ? 'active' : ''}" @click="${() => this._activeTab = 1}">${this.t.tabAttendance}</button>
-        <button class="tab-btn ${this._activeTab === 2 ? 'active' : ''}" @click="${() => this._activeTab = 2}">${this.t.tabGuide}</button>
+        <button class="tab-btn ${this._activeTab === 0 ? 'active' : ''}" @click="${() => this._activeTab = 0}">${this.t.tabGuide}</button>
+        ${!this.quizTabHidden ? html`<button class="tab-btn ${this._activeTab === 1 ? 'active' : ''}" @click="${() => this._activeTab = 1}">${this.t.tabQuiz}</button>` : ""}
+        <button class="tab-btn ${this._activeTab === 2 ? 'active' : ''}" @click="${() => this._activeTab = 2}">${this.t.tabAttendance}</button>
+        <button class="tab-btn ${this._activeTab === 3 ? 'active' : ''}" @click="${() => this._activeTab = 3}">${this.t.tabNilai}</button>
       </div>
 
       <activity-logger
@@ -215,31 +217,6 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
 
       <div class="main-content">
         ${this._activeTab === 0 ? html`
-          <explode-quiz
-            .appsScriptUrl="${this.appsScriptUrl}"
-            .sheetName="${this.sheetName}"
-             .studentId="${this._user?.studentId || ''}"
-             .studentName="${this._user?.nama || ''}"
-             .studentNis="${this._user?.nis || ''}"
-             .studentAbsen="${this._user?.absen || ''}"
-             .studentKelas="${this._user?.kelas || ''}"
-             .editable="${true}"
-            @quiz-saved="${this._onQuizSaved}">
-          </explode-quiz>
-        ` : this._activeTab === 1 ? html`
-          <div class="tracker-grid" style="margin-top: var(--ddd-spacing-6);">
-            <attendance-tracker></attendance-tracker>
-            <engagement-score></engagement-score>
-          </div>
-          <div style="margin-top: var(--ddd-spacing-6);">
-            <transparent-gradebook
-              .appsScriptUrl="${this.appsScriptUrl}"
-              .studentId="${this._user?.studentId || ''}"
-              .studentName="${this._user?.nama || ''}"
-              .viewMode="${this.viewMode}">
-            </transparent-gradebook>
-          </div>
-        ` : html`
           <h2 style="color: var(--ddd-theme-primary);">${this.t.tabGuide}</h2>
           <div class="guide-grid">
             <div class="guide-card">
@@ -254,6 +231,33 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
               <h3>🔗 Integrasi</h3>
               <p>Data tersinkron ke Google Sheets via Apps Script. Gunakan atribut <code>apps-script-url</code> dan <code>sheet-name</code>.</p>
             </div>
+          </div>
+        ` : this._activeTab === 1 && !this.quizTabHidden ? html`
+          <explode-quiz
+            .appsScriptUrl="${this.appsScriptUrl}"
+            .sheetName="${this.sheetName}"
+              .studentId="${this._user?.studentId || ''}"
+              .studentName="${this._user?.nama || ''}"
+              .studentNis="${this._user?.nis || ''}"
+              .studentAbsen="${this._user?.absen || ''}"
+              .studentKelas="${this._user?.kelas || ''}"
+              .editable="${true}"
+            @quiz-saved="${this._onQuizSaved}">
+          </explode-quiz>
+        ` : this._activeTab === 2 ? html`
+          <div class="tracker-grid" style="margin-top: var(--ddd-spacing-6);">
+            <attendance-tracker></attendance-tracker>
+            <engagement-score></engagement-score>
+          </div>
+        ` : html`
+          <div style="margin-top: var(--ddd-spacing-6);">
+            <transparent-gradebook
+              .appsScriptUrl="${this.appsScriptUrl}"
+              .studentId="${this._user?.studentId || ''}"
+              .studentName="${this._user?.nama || ''}"
+              .viewMode="${this.viewMode}"
+              .showAfterQuiz="${true}">
+            </transparent-gradebook>
           </div>
         `}
       </div>
