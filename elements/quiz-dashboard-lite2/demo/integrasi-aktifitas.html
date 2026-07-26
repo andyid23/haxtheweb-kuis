@@ -38,7 +38,7 @@
   <!-- STEP 1: Login -->
   <div class="step">
     <h2><span class="step-num">1</span> Login / Registrasi</h2>
-    <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbxS_d0GHLcN3vwQpzdhvWaCVHHXyZERg-jHW_EurwJWjcahObxc1S7qEj0uMbtL_QIo/exec"></quiz-user-auth>
+    <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"></quiz-user-auth>
   </div>
 
   <!-- STEP 2: Tugas + Forum -->
@@ -46,12 +46,13 @@
     <h2><span class="step-num">2</span> Tugas Mandiri & Forum Diskusi</h2>
     <p style="font-size:13px;color:#666;">Tugas tersimpan ke <code>Tugas Log</code> sheet. Forum CRUD via <code>Forum Log</code> sheet (nested replies, like, sort).</p>
     <assignment-forum
+    hide-delete 
       id="af1"
       assignment-title="Refleksi Energi Terbarukan"
       assignment-instruction="Tuliskan refleksi: kontribusi apa yang bisa Anda lakukan untuk mendukung energi terbarukan di lingkungan rumah? Sertakan link Google Drive/Doc jika ada file pendukung."
       forum-topik="Diskusi: Potensi Energi Terbarukan"
-      apps-script-url="https://script.google.com/macros/s/AKfycbxS_d0GHLcN3vwQpzdhvWaCVHHXyZERg-jHW_EurwJWjcahObxc1S7qEj0uMbtL_QIo/exec"
-      forum-api-url="https://script.google.com/macros/s/AKfycbwOU2gTw6vUYbrxU0jfmTJ2PgK1EJjngfBS0pk3RZiF17KjfmBEyiVyO2cguXi-rG6LrQ/exec"
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
+      forum-api-url="https://script.google.com/macros/s/AKfycby1Ltq-eg599WR2W4FPY6r_GDNs_N5gB29Pvdf3NisKvWlymh3xl6ajk0kU-IkxyAT_Nw/exec"
       sheet-name="Pertemuan 1"
       view-mode="lecturer">
     </assignment-forum>
@@ -60,11 +61,11 @@
   <!-- STEP 3: Kuis Formatif -->
   <div class="step">
     <h2><span class="step-num">3</span> Kuis Formatif</h2>
-    <explode-quiz
+    <explode-quiz hide-answers hide-confetti editable="true"
       id="quiz1"
       sheet-name="Pertemuan 1"
       quiz-category="formatif"
-      apps-script-url="https://script.google.com/macros/s/AKfycbxS_d0GHLcN3vwQpzdhvWaCVHHXyZERg-jHW_EurwJWjcahObxc1S7qEj0uMbtL_QIo/exec"
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
       shuffle-choices
       questions='[
         {"type":"mc","question":"Apa kepanjangan HTML?","choices":["HyperText Markup Language","High Text Machine Language","Home Tool Markup Language","Hyperlinks Text Markup"],"correctIndex":0},
@@ -79,10 +80,17 @@
     <h2><span class="step-num">4</span> Dashboard Dosen (Nilai + Rapor)</h2>
     <p style="font-size:13px;color:#666;">Mode dosen: generate rapor, input UTS/UAS manual, atur 6 komponen bobot (Kehadiran:UH:UTS:UAS:Sikap:Skill). Auto-calc sikap dari tugas+forum, skill dari quiz+baca.</p>
     <quiz-dashboard-lite2
-      apps-script-url="https://script.google.com/macros/s/AKfycbxS_d0GHLcN3vwQpzdhvWaCVHHXyZERg-jHW_EurwJWjcahObxc1S7qEj0uMbtL_QIo/exec"
+    quiz-tab-hidden
+    view-mode="student" 
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
       sheet-name="Pertemuan 1"
       view-mode="lecturer">
     </quiz-dashboard-lite2>
+    <transparent-gradebook
+      show-after-quiz
+      ...>
+    </transparent-gradebook>
+    
   </div>
 
   <!-- ALUR DATA -->

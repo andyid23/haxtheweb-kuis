@@ -797,13 +797,16 @@ function deleteForumComment(data) {
 
   const commentId = String(data.id || "");
   const allData = sheet.getDataRange().getValues();
-  for (let i = 1; i < allData.length; i++) {
-    if (String(allData[i][1]) === commentId) {
-      sheet.deleteRow(i + 1);
-      return { status: "ok", message: "Komentar dihapus" };
+  const rowsToDelete = [];
+  for (let i = allData.length - 1; i >= 1; i--) {
+    if (String(allData[i][1]) === commentId || String(allData[i][2]) === commentId) {
+      rowsToDelete.push(i + 1);
     }
   }
-  return { status: "error", message: "Komentar tidak ditemukan" };
+  rowsToDelete.forEach(row => sheet.deleteRow(row));
+  return rowsToDelete.length > 0
+    ? { status: "ok", message: `${rowsToDelete.length} komentar dihapus` }
+    : { status: "error", message: "Komentar tidak ditemukan" };
 }
 
 // ============================================

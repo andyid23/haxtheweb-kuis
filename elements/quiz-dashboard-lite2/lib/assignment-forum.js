@@ -21,6 +21,7 @@ export class AssignmentForum extends LitElement {
       _assignmentSubmitted: { state: true },
       _submitting: { state: true },
       viewMode: { type: String, attribute: "view-mode" },
+      hideDelete: { type: Boolean, attribute: "hide-delete", reflect: true },
     };
   }
 
@@ -40,6 +41,7 @@ export class AssignmentForum extends LitElement {
     this._assignmentSubmitted = localStorage.getItem("hax_assignment_submitted") === "true";
     this._assignmentLink = localStorage.getItem("hax_assignment_link") || "";
     this._submitting = false;
+    this.hideDelete = false;
   }
 
   connectedCallback() {
@@ -249,32 +251,42 @@ export class AssignmentForum extends LitElement {
         method: "POST", headers: { "Content-Type": "text/plain" },
         body: JSON.stringify({ action: "deleteForumComment", id: commentId })
       });
-      // Remove from local state — also remove nested replies
-      this._comments = this._comments.filter(c => c.id !== commentId)
-        .map(c => ({ ...c, replies: (c.replies || []).filter(r => r.id !== commentId) }));
+      // Collect all IDs to delete (parent + children)
+      const idsToDelete = new Set([commentId]);
+      this._comments.forEach(c => {
+        if (c.id === commentId && c.replies) {
+          c.replies.forEach(r => idsToDelete.add(r.id));
+        }
+      });
+      this._comments = this._comments.filter(c => !idsToDelete.has(c.id))
+        .map(c => ({ ...c, replies: (c.replies || []).filter(r => !idsToDelete.has(r.id)) }));
     } catch (e) {
       console.error("[assignment-forum] Delete failed:", e);
     }
   }
 
-  _handleLike(commentId) {
-    this._comments = this._comments.map(c => {
-      if (c.id === commentId) {
-        const isLiked = !c.isLiked;
-        return { ...c, isLiked, likes: isLiked ? (c.likes || 0) + 1 : Math.max(0, (c.likes || 0) - 1) };
+  _findAndUpdateComment(comments, id, updater) {
+    return comments.map(c => {
+      if (c.id === id) return updater(c);
+      if (c.replies && c.replies.length > 0) {
+        return { ...c, replies: this._findAndUpdateComment(c.replies, id, updater) };
       }
       return c;
+    });
+  }
+
+  _handleLike(commentId) {
+    this._comments = this._findAndUpdateComment(this._comments, commentId, c => {
+      const isLiked = !c.isLiked;
+      return { ...c, isLiked, likes: isLiked ? (c.likes || 0) + 1 : (c.likes || 0) - 1 };
     });
     this._syncLike(commentId);
   }
 
   _handleDislike(commentId) {
-    this._comments = this._comments.map(c => {
-      if (c.id === commentId) {
-        const isDisliked = !c.isDisliked;
-        return { ...c, isDisliked, likes: (c.likes || 0) + (isDisliked ? -1 : 1) };
-      }
-      return c;
+    this._comments = this._findAndUpdateComment(this._comments, commentId, c => {
+      const isDisliked = !c.isDisliked;
+      return { ...c, isDisliked, likes: (c.likes || 0) + (isDisliked ? -1 : 1) };
     });
     this._syncLike(commentId);
   }
@@ -295,10 +307,19 @@ export class AssignmentForum extends LitElement {
     this._activeReplyId = this._activeReplyId === commentId ? null : commentId;
   }
 
+  _isValidUrl(str) {
+    try { const u = new URL(str); return u.protocol === "http:" || u.protocol === "https:"; }
+    catch { return false; }
+  }
+
   async _submitAssignment() {
     if (this._submitting) return;
     const text = this._assignmentText.trim();
-    if (!text) { alert("Isi tugas terlebih dahulu!"); return; }
+    if (!text && !this._assignmentLink) { alert("Isi tugas atau link Google Drive terlebih dahulu!"); return; }
+    if (this._assignmentLink && !this._isValidUrl(this._assignmentLink)) {
+      alert("Format link tidak valid. Gunakan URL Google Drive/Doc.");
+      return;
+    }
 
     this._submitting = true;
     const tugasUrl = this.forumApiUrl || this.appsScriptUrl;
@@ -455,7 +476,7 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
                 </span>
                 <span class="action-btn" @click="${() => this._handleDislike(c.id)}">🔻</span>
                 <span class="action-btn" @click="${() => this._toggleReply(c.id)}">Reply</span>
-                ${this.viewMode === "lecturer" ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(c.id)}">🗑️ Hapus</span>` : ""}
+                ${this.viewMode === "lecturer" && !this.hideDelete ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(c.id)}">🗑️ Hapus</span>` : ""}
               </div>
 
               ${this._activeReplyId === c.id ? html`
@@ -479,7 +500,7 @@ h1{color:#002f6c;} .meta{color:#888;font-size:13px;} .content{line-height:1.8;ma
                         <div class="action-bar" style="margin-top:4px;">
                           <span class="action-btn" @click="${() => this._handleLike(r.id)}">🔺 ${r.likes || 0}</span>
                           <span class="action-btn" @click="${() => this._handleDislike(r.id)}">🔻</span>
-                          ${this.viewMode === "lecturer" ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(r.id)}">🗑️ Hapus</span>` : ""}
+                          ${this.viewMode === "lecturer" && !this.hideDelete ? html`<span class="action-btn" style="color:#e53e3e;" @click="${() => this._deleteComment(r.id)}">🗑️ Hapus</span>` : ""}
                         </div>
                       </div>
                     </div>

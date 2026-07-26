@@ -212,6 +212,7 @@ export class ActivityLogger extends LitElement {
     window.addEventListener("discussion-saved", this._handleDiscussionSaved);
     window.addEventListener("assignment-saved", this._handleAssignmentSaved);
     window.addEventListener("reading-saved", this._handleReadingSaved);
+    window.addEventListener("quiz-saved", () => { this._quizCompleted = true; });
     window.addEventListener("a3-force-reload", () => {
       this._logs = JSON.parse(localStorage.getItem(LOGS_STORAGE_KEY) || "[]");
     });
@@ -1440,6 +1441,8 @@ export class TransparentGradebook extends LitElement {
       studentId: { type: String, attribute: "student-id" },
       studentName: { type: String, attribute: "student-name" },
       viewMode: { type: String, attribute: "view-mode" },
+      showAfterQuiz: { type: Boolean, attribute: "show-after-quiz", reflect: true },
+      showAfterDate: { type: String, attribute: "show-after-date" },
       _logs: { type: Array },
       _thresholds: { type: Object },
       _gradesConfig: { type: Object },
@@ -1456,6 +1459,9 @@ export class TransparentGradebook extends LitElement {
     this.studentId = "";
     this.studentName = "";
     this.viewMode = "student";
+    this.showAfterQuiz = false;
+    this.showAfterDate = "";
+    this._quizCompleted = false;
     this._logs = getInitialLogs();
     this._thresholds = getThresholds();
     this._gradesConfig = getGradesConfig();
@@ -1564,6 +1570,13 @@ export class TransparentGradebook extends LitElement {
       currentWeek: currentWeekAttendanceScore,
       overall: currentWeekAttendanceScore
     };
+  }
+
+  _shouldShowGradebook() {
+    if (!this.showAfterQuiz && !this.showAfterDate) return true;
+    if (this.showAfterQuiz && !this._quizCompleted) return false;
+    if (this.showAfterDate && new Date() < new Date(this.showAfterDate)) return false;
+    return true;
   }
 
   _getFinalScore() {
@@ -1888,6 +1901,7 @@ export class TransparentGradebook extends LitElement {
     ];
 
     return html`
+      ${this._shouldShowGradebook() ? html`
       <div class="grade-card">
         <div class="card-header">
           <h3>📖 Transparansi Nilai & Hasil Belajar</h3>
@@ -2133,6 +2147,7 @@ export class TransparentGradebook extends LitElement {
           </div>
         ` : ""}
       </div>
+      ` : html`<div class="grade-card"><p style="text-align:center;color:#888;padding:20px;">Transparansi nilai akan muncul setelah kuis diselesaikan atau pada waktu yang ditentukan.</p></div>`}
     `;
   }
 }

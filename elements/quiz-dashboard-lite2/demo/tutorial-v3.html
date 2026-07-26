@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial: Perubahan Kode v3 — Bug Fix + New Properties</title>
+  <style>
+    body { padding: 24px; max-width: 960px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 22px; border-bottom: 3px solid #002f6c; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    h3 { color: #555; font-size: 14px; margin-top: 16px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+    th { background: #f0f4f8; padding: 8px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    .file { font-family: monospace; color: #007bff; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>📚 Tutorial Perubahan Kode v3</h1>
+  <p style="color:#666;font-size:13px;">Quiz Dashboard Lite2 — Bug Fix + New Properties — 26 Juli 2026</p>
+
+  <!-- DAFTAR ISI -->
+  <div class="card">
+    <h3>Daftar Isi</h3>
+    <ol style="font-size:13px;line-height:2;">
+      <li><a href="#bug1">Bug Fix: Delete komentar + anak reply di sheet</a></li>
+      <li><a href="#bug2">Bug Fix: Vote button pada reply card</a></li>
+      <li><a href="#feat1">Feature: <code>hide-delete</code> — sembunyikan tombol hapus</a></li>
+      <li><a href="#feat2">Feature: Validasi link Google Drive/Docs</a></li>
+      <li><a href="#feat3">Feature: <code>quiz-tab-hidden</code> + <code>gradebook-hidden</code></a></li>
+      <li><a href="#feat4">Feature: <code>show-after-quiz</code> + <code>show-after-date</code></a></li>
+      <li><a href="#props">Daftar Semua Properties</a></li>
+    </ol>
+  </div>
+
+  <!-- BUG 1 -->
+  <h2 id="bug1"><span class="tag tag-fix">BUG FIX</span> Delete Komentar + Anak Reply</h2>
+  <div class="card">
+    <h3>Masalah</h3>
+    <p style="font-size:13px;color:#666;">Ketika menghapus komentar induk di sheet, reply/anak komentar tidak ikut terhapus. Contoh:</p>
+    <pre>Timestamp              | CommentID     | ParentID      | UserName
+26/07/2026 15:17:37    | 1785053854286 | 1785050828652 | andy  ← reply (ParentID = induk)
+26/07/2026 15:43:38    | 1785055415814 | 1785050828652 | andy  ← reply (ParentID = induk)
+26/07/2026 18:26:29    | 1785065186782 | main          | Andy  ← induk (ID = 1785065186782)</pre>
+
+    <h3>Fix</h3>
+    <p style="font-size:13px;"><strong>code-forum-tugas.gs</strong> + <strong>code.gs</strong>:</p>
+    <pre>// deleteForumComment — hapus parent + semua reply
+const rowsToDelete = [];
+for (let i = allData.length - 1; i >= 1; i--) {
+  if (String(allData[i][1]) === commentId || String(allData[i][2]) === commentId) {
+    rowsToDelete.push(i + 1); // ParentID match = reply juga dihapus
+  }
+}
+rowsToDelete.forEach(row => sheet.deleteRow(row));</pre>
+
+    <p style="font-size:13px;"><strong>assignment-forum.js</strong> — frontend juga hapus children:</p>
+    <pre>// _deleteComment() — collect parent + children IDs
+const idsToDelete = new Set([commentId]);
+this._comments.forEach(c => {
+  if (c.id === commentId &amp;&amp; c.replies) {
+    c.replies.forEach(r => idsToDelete.add(r.id));
+  }
+});
+this._comments = this._comments.filter(c => !idsToDelete.has(c.id));</pre>
+  </div>
+
+  <!-- BUG 2 -->
+  <h2 id="bug2"><span class="tag tag-fix">BUG FIX</span> Vote Button pada Reply Card</h2>
+  <div class="card">
+    <h3>Masalah</h3>
+    <p style="font-size:13px;color:#666;">Tombol 🔺 dan 🔻 pada reply card tidak berfungsi. Klik vote tidak ada efek.</p>
+
+    <h3>Root Cause</h3>
+    <p style="font-size:13px;"><code>_handleLike()</code> hanya search <code>this._comments</code> (top-level). Reply ada di <code>c.replies</code> (nested).</p>
+
+    <h3>Fix</h3>
+    <pre>// Helper recursive — cari comment di mana saja (parent atau child)
+_findAndUpdateComment(comments, id, updater) {
+  return comments.map(c => {
+    if (c.id === id) return updater(c);
+    if (c.replies &amp;&amp; c.replies.length > 0) {
+      return { ...c, replies: this._findAndUpdateComment(c.replies, id, updater) };
+    }
+    return c;
+  });
+}
+
+// _handleLike &amp; _handleDislike sekarang pakai helper ini
+this._comments = this._findAndUpdateComment(this._comments, commentId, c => {
+  const isLiked = !c.isLiked;
+  return { ...c, isLiked, likes: isLiked ? (c.likes || 0) + 1 : (c.likes || 0) - 1 };
+});</pre>
+  </div>
+
+  <!-- FEAT 1 -->
+  <h2 id="feat1"><span class="tag tag-feat">BARU</span> <code>hide-delete</code> — Sembunyikan Tombol Hapus</h2>
+  <div class="card">
+    <p style="font-size:13px;">Property untuk menyembunyikan tombol 🗑️ Hapus meskipun dalam mode lecturer.</p>
+    <pre>&lt;assignment-forum hide-delete view-mode="lecturer" ...&gt;&lt;/assignment-forum&gt;</pre>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideDelete</code></td><td><code>hide-delete</code></td><td>Boolean</td><td>false</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FEAT 2 -->
+  <h2 id="feat2"><span class="tag tag-feat">BARU</span> Validasi Link Google Drive/Docs</h2>
+  <div class="card">
+    <p style="font-size:13px;">Input link divalidasi sebelum submit. URL harus valid (http/https).</p>
+    <pre>_isValidUrl(str) {
+  try { const u = new URL(str); return u.protocol === "http:" || u.protocol === "https:"; }
+  catch { return false; }
+}
+
+// Di _submitAssignment():
+if (this._assignmentLink &amp;&amp; !this._isValidUrl(this._assignmentLink)) {
+  alert("Format link tidak valid. Gunakan URL Google Drive/Doc.");
+  return;
+}</pre>
+    <p style="font-size:13px;">Tugas juga bisa dikirim tanpa link (hanya text) atau tanpa text (hanya link).</p>
+  </div>
+
+  <!-- FEAT 3 -->
+  <h2 id="feat3"><span class="tag tag-feat">BARU</span> <code>quiz-tab-hidden</code> + <code>gradebook-hidden</code></h2>
+  <div class="card">
+    <p style="font-size:13px;">Properties di <code>&lt;quiz-dashboard-lite2&gt;</code> untuk kontrol visibilitas tab dan gradebook.</p>
+    <pre>&lt;quiz-dashboard-lite2
+  quiz-tab-hidden
+  gradebook-hidden
+  view-mode="student"
+  ...&gt;
+&lt;/quiz-dashboard-lite2&gt;</pre>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>quizTabHidden</code></td><td><code>quiz-tab-hidden</code></td><td>Sembunyikan tab "📝 Ambil Kuis"</td></tr>
+        <tr><td><code>gradebookHidden</code></td><td><code>gradebook-hidden</code></td><td>Sembunyikan <code>&lt;transparent-gradebook&gt;</code></td></tr>
+      </tbody>
+    </table>
+    <h3>Contoh Penggunaan</h3>
+    <pre>&lt;!-- Mahasiswa hanya lihat kehadiran, tidak bisa akses kuis --&gt;
+&lt;quiz-dashboard-lite2 quiz-tab-hidden view-mode="student" ...&gt;
+
+&lt;!-- Sembunyikan gradebook sampai waktu tertentu --&gt;
+&lt;quiz-dashboard-lite2 gradebook-hidden view-mode="student" ...&gt;</pre>
+  </div>
+
+  <!-- FEAT 4 -->
+  <h2 id="feat4"><span class="tag tag-feat">BARU</span> <code>show-after-quiz</code> + <code>show-after-date</code></h2>
+  <div class="card">
+    <p style="font-size:13px;">Properties di <code>&lt;transparent-gradebook&gt;</code> untuk kontrol kapan gradebook muncul.</p>
+    <pre>&lt;transparent-gradebook
+  show-after-quiz
+  show-after-date="2026-08-15T00:00:00"
+  ...&gt;
+&lt;/transparent-gradebook&gt;</pre>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td><code>showAfterQuiz</code></td><td><code>show-after-quiz</code></td><td>Muncul hanya setelah siswa menyelesaikan kuis</td></tr>
+        <tr><td><code>showAfterDate</code></td><td><code>show-after-date</code></td><td>Muncul setelah tanggal/waktu tertentu (ISO format)</td></tr>
+      </tbody>
+    </table>
+    <h3>Logika</h3>
+    <pre>_shouldShowGradebook() {
+  if (!this.showAfterQuiz &amp;&amp; !this.showAfterDate) return true; // always show
+  if (this.showAfterQuiz &amp;&amp; !this._quizCompleted) return false;
+  if (this.showAfterDate &amp;&amp; new Date() &lt; new Date(this.showAfterDate)) return false;
+  return true;
+}</pre>
+    <p style="font-size:13px;">Ketika tidak muncul, tampilkan pesan: <em>"Transparansi nilai akan muncul setelah kuis diselesaikan atau pada waktu yang ditentukan."</em></p>
+  </div>
+
+  <!-- DAFTAR SEMUA PROPERTIES -->
+  <h2 id="props">📋 Daftar Semua Properties</h2>
+  <div class="card">
+    <h3>explode-quiz</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideAnswers</code></td><td><code>hide-answers</code></td><td>Boolean</td><td>false</td><td>Sembunyikan feedback benar/salah</td></tr>
+        <tr><td><code>hideConfetti</code></td><td><code>hide-confetti</code></td><td>Boolean</td><td>false</td><td>Nonaktifkan efek confetti</td></tr>
+        <tr><td><code>shuffleChoices</code></td><td><code>shuffle-choices</code></td><td>Boolean</td><td>false</td><td>Acak urutan pilihan</td></tr>
+        <tr><td><code>quizCategory</code></td><td><code>quiz-category</code></td><td>String</td><td>"formatif"</td><td>formatif/ulangan_harian/uts/uas</td></tr>
+      </tbody>
+    </table>
+
+    <h3>assignment-forum</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideDelete</code></td><td><code>hide-delete</code></td><td>Boolean</td><td>false</td><td>Sembunyikan tombol hapus</td></tr>
+        <tr><td><code>viewMode</code></td><td><code>view-mode</code></td><td>String</td><td>"student"</td><td>"student"/"lecturer"</td></tr>
+        <tr><td><code>forumApiUrl</code></td><td><code>forum-api-url</code></td><td>String</td><td>""</td><td>URL code.gs terpisah untuk forum+tugas</td></tr>
+      </tbody>
+    </table>
+
+    <h3>quiz-dashboard-lite2</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>quizTabHidden</code></td><td><code>quiz-tab-hidden</code></td><td>Boolean</td><td>false</td><td>Sembunyikan tab kuis</td></tr>
+        <tr><td><code>gradebookHidden</code></td><td><code>gradebook-hidden</code></td><td>Boolean</td><td>false</td><td>Sembunyikan gradebook</td></tr>
+      </tbody>
+    </table>
+
+    <h3>transparent-gradebook</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Tipe</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>showAfterQuiz</code></td><td><code>show-after-quiz</code></td><td>Boolean</td><td>false</td><td>Muncul setelah kuis selesai</td></tr>
+        <tr><td><code>showAfterDate</code></td><td><code>show-after-date</code></td><td>String</td><td>""</td><td>Muncul setelah tanggal tertentu (ISO)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align:center;padding:30px;color:#aaa;font-size:12px;">
+    Quiz Dashboard Lite2 — Tutorial v3 — 26 Juli 2026
+  </div>
+</body>
+</html>

@@ -18,6 +18,8 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
       appsScriptUrl: { type: String, attribute: "apps-script-url" },
       sheetName: { type: String, attribute: "sheet-name" },
       viewMode: { type: String, attribute: "view-mode" },
+      quizTabHidden: { type: Boolean, attribute: "quiz-tab-hidden", reflect: true },
+      gradebookHidden: { type: Boolean, attribute: "gradebook-hidden", reflect: true },
       _spreadsheetId: { state: true },
       _activeTab: { state: true },
       _successMsg: { state: true },
@@ -30,7 +32,9 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
     super();
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
-    this.viewMode = "student"; // "student" atau "lecturer"
+    this.viewMode = "student";
+    this.quizTabHidden = false;
+    this.gradebookHidden = false; // "student" atau "lecturer"
     this._user = null;
     this._spreadsheetId = "";
     this._activeTab = 0;
@@ -196,7 +200,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
 
       <!-- Tabs -->
       <div class="tab-container">
-        <button class="tab-btn ${this._activeTab === 0 ? 'active' : ''}" @click="${() => this._activeTab = 0}">${this.t.tabQuiz}</button>
+        ${!this.quizTabHidden ? html`<button class="tab-btn ${this._activeTab === 0 ? 'active' : ''}" @click="${() => this._activeTab = 0}">${this.t.tabQuiz}</button>` : ""}
         <button class="tab-btn ${this._activeTab === 1 ? 'active' : ''}" @click="${() => this._activeTab = 1}">${this.t.tabAttendance}</button>
         <button class="tab-btn ${this._activeTab === 2 ? 'active' : ''}" @click="${() => this._activeTab = 2}">${this.t.tabGuide}</button>
       </div>
@@ -230,12 +234,14 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
             <engagement-score></engagement-score>
           </div>
           <div style="margin-top: var(--ddd-spacing-6);">
-            <transparent-gradebook
-              .appsScriptUrl="${this.appsScriptUrl}"
-              .studentId="${this._user?.studentId || ''}"
-              .studentName="${this._user?.nama || ''}"
-              .viewMode="${this.viewMode}">
-            </transparent-gradebook>
+            ${!this.gradebookHidden ? html`
+              <transparent-gradebook
+                .appsScriptUrl="${this.appsScriptUrl}"
+                .studentId="${this._user?.studentId || ''}"
+                .studentName="${this._user?.nama || ''}"
+                .viewMode="${this.viewMode}">
+              </transparent-gradebook>
+            ` : ""}
           </div>
         ` : html`
           <h2 style="color: var(--ddd-theme-primary);">${this.t.tabGuide}</h2>
