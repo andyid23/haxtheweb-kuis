@@ -1479,8 +1479,10 @@ export class TransparentGradebook extends LitElement {
       this._gradesConfig = getGradesConfig();
       this._fetchScores();
     };
+    this._quizCompleteHandler = () => { this._quizCompleted = true; };
     window.addEventListener("a3-activity-logged", this._reloadHandler);
     window.addEventListener("a3-force-reload", this._reloadHandler);
+    window.addEventListener("quiz-saved", this._quizCompleteHandler);
     this._fetchScores();
     this._fetchRoster();
   }
@@ -1488,6 +1490,7 @@ export class TransparentGradebook extends LitElement {
   disconnectedCallback() {
     window.removeEventListener("a3-activity-logged", this._reloadHandler);
     window.removeEventListener("a3-force-reload", this._reloadHandler);
+    window.removeEventListener("quiz-saved", this._quizCompleteHandler);
     super.disconnectedCallback();
   }
 

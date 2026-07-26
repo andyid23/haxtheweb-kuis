@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo v4: Gradebook Timing + Per-Choice Images + Matching Partial + Stimulus</title>
+  <script type="module" src="../quiz-dashboard-lite2.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 20px; border-bottom: 3px solid #002f6c; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .info { background: #e8f4fd; border: 1px solid #b3d8f5; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+    .info code { background: #d1e8ff; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .stimulus-box { background: #f8f9fa; border-left: 4px solid #007bff; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 12px 0; line-height: 1.6; font-size: 1rem; text-align: justify; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    .tag-new { background: #d4edda; color: #155724; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Demo v4: Gradebook Timing + Per-Choice Images + Matching Partial + Stimulus</h1>
+  <div class="info">
+    <strong>Fitur v4:</strong><br>
+    <span class="tag tag-new">BARU</span> <code>show-after-quiz</code> + <code>show-after-date</code> untuk transparansi nilai<br>
+    <span class="tag tag-new">BARU</span> Per-Choice Image URL di editor + display<br>
+    <span class="tag tag-new">BARU</span> Matching Partial Score (per-pair scoring)<br>
+    <span class="tag tag-fix">FIX</span> Question text stimulus box styling<br>
+    <span class="tag tag-fix">FIX</span> Edit button accessible dari question screen<br>
+    <span class="tag tag-fix">FIX</span> Gradebook selalu rendered, visibility via internal logic
+  </div>
+
+  <!-- CONTOH 1: Quiz dengan Per-Choice Image -->
+  <div class="card">
+    <h2>📝 Contoh 1: Quiz dengan Per-Choice Image URL</h2>
+    <p style="font-size:13px;color:#666;">Setiap pilihan jawaban bisa punya URL gambar sendiri. Bisa juga text saja atau object.</p>
+    <explode-quiz
+      id="quiz-images"
+      sheet-name="Pertemuan 1"
+      quiz-category="formatif"
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
+      editable="true"
+      questions='[
+        {
+          "question": "Logo bahasa pemrograman mana yang populer untuk web development?",
+          "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Unofficial_JavaScript_logo_2.svg/240px-Unofficial_JavaScript_logo_2.svg.png",
+          "choices": [
+            {"text": "JavaScript", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Unofficial_JavaScript_logo_2.svg/240px-Unofficial_JavaScript_logo_2.svg.png"},
+            "Python",
+            {"text": "Java", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/Java_programming_language_logo.svg/240px-Java_programming_language_logo.svg.png"},
+            "C++"
+          ],
+          "correctIndex": 0,
+          "points": 2
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- CONTOH 2: Matching dengan Partial Score -->
+  <div class="card">
+    <h2>📝 Contoh 2: Matching dengan Partial Score</h2>
+    <p style="font-size:13px;color:#666;">Jika siswa menjawab 2 dari 4 pasangan benar dengan <code>points: 4</code>, skor = 2 poin. Confetti hanya muncul jika SEMUA benar.</p>
+    <div class="stimulus-box">
+      <p><strong>Bacalah:</strong> Jodohkan teknologi web dengan fungsinya. Setiap jawaban benar mendapat 1 poin dari total 4 poin. Jika Anda menjawab 2 benar dari 4, Anda mendapat 2 poin.</p>
+    </div>
+    <explode-quiz
+      id="quiz-matching"
+      sheet-name="Pertemuan 1"
+      quiz-category="formatif"
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
+      editable="true"
+      questions='[
+        {
+          "type": "matching",
+          "question": "Jodohkan teknologi dengan fungsi utamanya:",
+          "leftItems": ["HTML", "CSS", "JavaScript", "DOM API"],
+          "rightItems": ["Manipulasi Elemen", "Styling & Layout", "Struktur & Markup", "Logika & Interaktivitas"],
+          "correctPairs": {"0":2, "1":1, "2":3, "3":0},
+          "points": 4
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- CONTOH 3: Dashboard dengan show-after-quiz -->
+  <div class="card">
+    <h2>📊 Contoh 3: Dashboard dengan <code>show-after-quiz</code></h2>
+    <p style="font-size:13px;color:#666;">Transparansi nilai baru muncul setelah siswa submit kuis. Sebelumnya menampilkan pesan "nilai akan muncul setelah kuis".</p>
+    <!-- <quiz-user-auth id="auth3" apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"></quiz-user-auth> -->
+    <quiz-dashboard-lite2
+      apps-script-url="https://script.google.com/macros/s/AKfycbw6iaBn4NYNwmN9z-Bks4P302cXlxiGiz4Uxr7gUyoR5y62JLEOagV3S5uhV_J7e8-V/exec"
+      sheet-name="Pertemuan 1"
+      view-mode="student" quiz-tab-hidden="true">
+    </quiz-dashboard-lite2>
+  </div>
+
+  <!-- TUTORIAL / DOKUMENTASI -->
+  <div class="card">
+    <h2>📚 Dokumentasi v4 — Bug Fix & New Features</h2>
+
+    <h3>Fix 1: TransparentGradebook <code>show-after-quiz</code></h3>
+    <p style="font-size:13px;"><strong>Root cause:</strong> Gradebook tidak punya listener untuk event <code>quiz-saved</code> di connectedCallback, sehingga <code>_quizCompleted</code> tetap <code>false</code>.</p>
+    <pre>// attendance-system.js
+connectedCallback() {
+  super.connectedCallback();
+  this._quizCompleteHandler = () => { this._quizCompleted = true; };
+  window.addEventListener("quiz-saved", this._quizCompleteHandler);
+  // ...
+}
+disconnectedCallback() {
+  window.removeEventListener("quiz-saved", this._quizCompleteHandler);
+  // ...
+}</pre>
+    <p style="font-size:13px;"><strong>Penggunaan:</strong></p>
+    <pre>&lt;quiz-dashboard-lite2 view-mode="student" ...&gt;&lt;/quiz-dashboard-lite2&gt;
+&lt;!-- Gradebook ada di dalam dashboard, show-after-quiz control internal --&gt;</pre>
+
+    <h3>Fix 2: <code>gradebook-hidden</code> Removed</h3>
+    <p style="font-size:13px;">Property <code>gradebook-hidden</code> dihapus dari dashboard. Gradebook selalu di-render, visibility dikontrol oleh <code>show-after-quiz</code> internal.</p>
+    <pre>// SEBELUM: ${!this.gradebookHidden ? html`...gradebook...` : ""}
+// SESUDAH: langsung render
+&lt;transparent-gradebook
+  .appsScriptUrl="${this.appsScriptUrl}"
+  .studentId="${...}"
+  .viewMode="${this.viewMode}"&gt;
+&lt;/transparent-gradebook&gt;</pre>
+
+    <h3>Fix 3: Edit Button Accessible from Question Screen</h3>
+    <pre>// _openEditor() — sebelumnya guard hanya "result"
+_openEditor() {
+  if (this._editing) return;
+  if (this._screen !== "result" &amp;&amp; this._screen !== "question") return;
+  // ...
+}
+
+// Tambahkan button di _renderQuestionScreen():
+${this.editable ? html`
+  &lt;button class="edit-questions-btn" @click="${this._openEditor}"&gt;
+    ✏️ Edit Soal
+  &lt;/button&gt;
+` : ""}</pre>
+
+    <h3>Feature: Per-Choice Image URL</h3>
+    <p style="font-size:13px;">Backward compatible: string lama = text saja. Object baru = text + image.</p>
+    <pre>// Format data:
+{
+  "choices": [
+    {"text": "JavaScript", "image": "https://.../js.png"},
+    "Python",  // string = text saja
+    {"text": "Java", "image": "https://.../java.png"}
+  ]
+}
+
+// Helper:
+_getChoiceText(choice) {
+  return typeof choice === 'string' ? choice : (choice?.text || '');
+}
+_getChoiceImage(choice) {
+  return typeof choice === 'string' ? null : (choice?.image || null);
+}</pre>
+
+    <h3>Feature: Matching Partial Score</h3>
+    <pre>_submitMatching() {
+  let correctCount = 0;
+  for (let i = 0; i &lt; left.length; i++) {
+    if (this._matchAnswers[i] === correctPairs[i]) correctCount++;
+  }
+  const earned = Math.round((correctCount / left.length) * (q.points || 1));
+  this._score += earned;
+  // Confetti hanya jika SEMUA benar
+  if (!this.hideConfetti &amp;&amp; correctCount === left.length) this._fireConfetti();
+}</pre>
+    <p style="font-size:13px;"><strong>Contoh:</strong> 4 pasangan, points=4. Siswa jawab 2 benar → earned = round(2/4 × 4) = 2 poin. Feedback: "2/4 pasangan benar (+2 poin). Lanjutkan!"</p>
+
+    <h3>Fix 6: Question Text Stimulus Styling</h3>
+    <pre>.question-text {
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.6;
+  text-align: justify;
+  color: var(--ddd-theme-on-surface, #333);
+  background: #f8f9fa;
+  border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+}</pre>
+  </div>
+
+  <!-- PENJELASAN viewMode -->
+  <div class="card">
+    <h2>📋 Penjelasan viewMode</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin:10px 0;">
+      <thead><tr style="background:#f0f4f8;">
+        <th style="padding:8px;text-align:left;">viewMode</th>
+        <th style="padding:8px;text-align:left;">Tampil</th>
+      </tr></thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #eee;"><td style="padding:8px;"><code>"student"</code></td><td style="padding:8px;">Lihat transparansi nilai sendiri saja (read-only). Tombol ⚙️ Mode Dosen TIDAK tampil.</td></tr>
+        <tr style="border-bottom:1px solid #eee;"><td style="padding:8px;"><code>"lecturer"</code></td><td style="padding:8px;">+ Tombol ⚙️ Mode Dosen tampil untuk akses konfigurasi bobot, generate rapor, input nilai manual UTS/UAS.</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;color:#d97706;"><strong>⚠️ Jangan tulis view-mode dua kali pada element yang sama!</strong> Atribut kedua menimpa yang pertama. Contoh salah:</p>
+    <pre>&lt;!-- ❌ SALAH — "lecturer" menimpa "student" --&gt;
+&lt;quiz-dashboard-lite2 view-mode="student" view-mode="lecturer"&gt;
+
+&lt;!-- ✅ BENAR — pilih satu --&gt;
+&lt;quiz-dashboard-lite2 view-mode="student"&gt;</pre>
+  </div>
+
+  <script type="module">
+    const auth3 = document.querySelector("#auth3");
+    auth3.addEventListener("quiz-user-login", (e) => {
+      console.log("User login:", e.detail);
+    });
+  </script>
+</body>
+</html>

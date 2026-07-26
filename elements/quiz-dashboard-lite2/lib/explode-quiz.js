@@ -214,6 +214,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       _matchAnswers: { state: true },
       _shortAnswerText: { state: true },
       _tempQuestionPoints: { state: true },
+      _tempChoiceImage0: { state: true },
+      _tempChoiceImage1: { state: true },
+      _tempChoiceImage2: { state: true },
+      _tempChoiceImage3: { state: true },
       _maxPoints: { state: true },
     };
   }
@@ -275,6 +279,10 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempAcceptedStatements = "[]";
     this._maxPoints = 0;
     this._tempQuestionPoints = 1;
+    this._tempChoiceImage0 = "";
+    this._tempChoiceImage1 = "";
+    this._tempChoiceImage2 = "";
+    this._tempChoiceImage3 = "";
     this.t = {
       quizTitle: "Kuis Interaktif",
       quizInstruction: "Masukkan nama Anda untuk memulai kuis.",
@@ -568,7 +576,16 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
       ${this._feedbackText
         ? html`<div class="feedback-area ${this._feedbackPositive ? "positive" : "negative"}" aria-live="polite">${this._feedbackText}</div>`
         : ""}
+
+      ${this.editable ? html`<button class="edit-questions-btn" style="margin-top:12px;font-size:12px;padding:6px 12px;" @click="${this._openEditor}">✏️ Edit Soal</button>` : ""}
     `;
+  }
+
+  _getChoiceText(choice) {
+    return typeof choice === 'string' ? choice : (choice?.text || '');
+  }
+  _getChoiceImage(choice) {
+    return typeof choice === 'string' ? null : (choice?.image || null);
   }
 
   _renderMC(q, isMulti) {
@@ -589,7 +606,9 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
         return html`<button class="${btnClass}" ?disabled="${this._answered}"
           @click="${() => isMulti ? this._toggleMultiAnswer(index) : this._selectAnswer(index)}"
-          aria-label="${this.t.ariaAnswerButton}: ${choice}">${isMulti && isSelected ? "✓ " : ""}${choice}</button>`;
+          aria-label="${this.t.ariaAnswerButton}: ${this._getChoiceText(choice)}">
+          ${this._getChoiceImage(choice) ? html`<img src="${this._getChoiceImage(choice)}" alt="" style="max-height:60px;border-radius:6px;object-fit:contain;display:block;margin:0 auto 4px;">` : ""}
+          ${isMulti && isSelected ? "✓ " : ""}${this._getChoiceText(choice)}</button>`;
       })}
       ${isMulti && !this._answered ? html`<button class="start-btn" style="margin-top:12px;font-size:13px;" @click="${() => this._submitMultiAnswers()}">Kirim Jawaban (${this._selectedAnswers.size} dipilih)</button>` : ""}
     </div>`;
@@ -750,24 +769,30 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     const correctPairs = q.correctPairs || {};
     if (Object.keys(this._matchAnswers).length < left.length) return;
     this._answered = true;
-    let allCorrect = true;
+
+    // Partial score: count correct pairs
+    let correctCount = 0;
     for (let i = 0; i < left.length; i++) {
-      if (this._matchAnswers[i] !== correctPairs[i]) { allCorrect = false; break; }
+      if (this._matchAnswers[i] === correctPairs[i]) correctCount++;
     }
-    if (allCorrect) {
-      this._score += (q.points || 1);
-      if (!this.hideAnswers) {
-        this._feedbackText = this.t.feedbackCorrect;
+    const totalPoints = q.points || 1;
+    const earned = Math.round((correctCount / left.length) * totalPoints);
+    this._score += earned;
+
+    if (!this.hideAnswers) {
+      if (correctCount === left.length) {
+        this._feedbackText = `${this.t.feedbackCorrect} (${correctCount}/${left.length} pasangan benar, +${earned} poin)`;
         this._feedbackPositive = true;
-      }
-      if (!this.hideConfetti) this._fireConfetti();
-    } else {
-      if (!this.hideAnswers) {
+      } else if (correctCount > 0) {
+        this._feedbackText = `${correctCount}/${left.length} pasangan benar (+${earned} poin). Lanjutkan!`;
+        this._feedbackPositive = true;
+      } else {
         const correctText = Object.entries(correctPairs).map(([k, v]) => `${parseInt(k) + 1}→${String.fromCharCode(65 + v)}`).join(", ");
         this._feedbackText = `${this.t.feedbackWrongPrefix}${correctText}`;
         this._feedbackPositive = false;
       }
     }
+    if (!this.hideConfetti && correctCount === left.length) this._fireConfetti();
     setTimeout(() => this._advanceQuiz(), 1200);
   }
 
@@ -992,13 +1017,11 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   }
 
   _openEditor() {
-    // Guard: only allow opening editor from 'result' screen
-    if (this._screen !== "result") return;
     if (this._editing) return;
+    if (this._screen !== "result" && this._screen !== "question") return;
 
     this._editing = true;
     this._editingIndex = -1;
-    // Deep copy questions to tempQuestions
     this._tempQuestions = JSON.parse(JSON.stringify(this.questions));
     this._screen = "editor";
   }
@@ -1110,11 +1133,14 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     return html`
       <div class="choices-container">
         ${[0, 1, 2, 3].map(index => html`
-          <div class="choice-input-wrapper">
-            <input class="choice-input" .value="${this[`_tempChoice${index}`]}"
+          <div class="choice-input-wrapper" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px;">
+            <input class="choice-input" style="flex:1;min-width:120px;" .value="${this[`_tempChoice${index}`]}"
               @input="${(e) => (this[`_tempChoice${index}`] = e.target.value)}"
               placeholder="${this.t.choicePlaceholder.replace("{N}", index + 1)}" />
-            <label class="choice-label">
+            <input type="url" placeholder="🖼️ URL gambar" style="width:150px;padding:6px;border-radius:4px;border:1px solid #ccc;font-size:12px;"
+              .value="${this[`_tempChoiceImage${index}`] || ''}"
+              @input="${(e) => (this[`_tempChoiceImage${index}`] = e.target.value)}" />
+            <label class="choice-label" style="font-size:12px;">
               <input type="checkbox" ?checked="${this._tempCorrectAnswers.includes(index)}"
                 @change="${(e) => {
                   if (e.target.checked) this._tempCorrectAnswers = [...this._tempCorrectAnswers, index];
@@ -1123,11 +1149,12 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
                 }}" />
               ${this.t.choiceCorrectLabel}
             </label>
+            ${this[`_tempChoiceImage${index}`] ? html`<img src="${this[`_tempChoiceImage${index}`]}" style="max-height:32px;border-radius:3px;margin-left:auto;">` : ""}
           </div>
         `)}
       </div>
       ${this._tempCorrectAnswers.length <= 1 ? html`
-        <div style="font-size:11px;color:#888;margin-top:4px;">Pilih 1 jawaban benar (radio). Centang lebih dari 1 untuk mode PG Kompleks.</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">Pilih 1 jawaban benar. Centang lebih dari 1 untuk mode PG Kompleks.</div>
       ` : html`
         <div style="font-size:11px;color:#6750a4;margin-top:4px;font-weight:bold;">Mode PG Kompleks: ${this._tempCorrectAnswers.length} jawaban benar dipilih</div>
       `}
@@ -1197,7 +1224,14 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
 
     if (qType === "mc") {
       if (!this._tempChoice0.trim() || !this._tempChoice1.trim()) { console.warn(this.t.emptyChoiceError); return; }
-      newQuestion.choices = [this._tempChoice0.trim(), this._tempChoice1.trim(), this._tempChoice2.trim(), this._tempChoice3.trim()].filter(c => c);
+      newQuestion.choices = [0, 1, 2, 3]
+        .map(i => {
+          const text = this[`_tempChoice${i}`]?.trim();
+          if (!text) return null;
+          const img = this[`_tempChoiceImage${i}`]?.trim();
+          return img ? { text, image: img } : text;
+        })
+        .filter(Boolean);
       if (this._tempCorrectAnswers.length > 1) newQuestion.correctAnswers = [...this._tempCorrectAnswers];
       else newQuestion.correctIndex = parseInt(this._tempCorrectIndex, 10);
     } else if (qType === "pgk") {
@@ -1224,6 +1258,7 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
   _resetEditorForm() {
     this._tempQuestionText = "";
     this._tempChoice0 = ""; this._tempChoice1 = ""; this._tempChoice2 = ""; this._tempChoice3 = "";
+    this._tempChoiceImage0 = ""; this._tempChoiceImage1 = ""; this._tempChoiceImage2 = ""; this._tempChoiceImage3 = "";
     this._tempCorrectIndex = "0"; this._tempCorrectAnswers = [];
     this._tempQuestionImage = ""; this._tempQuestionType = "mc"; this._tempQuestionPoints = 1;
     this._tempLeftItems = ["", ""]; this._tempRightItems = ["", ""];
@@ -1239,10 +1274,15 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     this._tempQuestionImage = q.image || "";
     this._tempQuestionType = q.type || "mc";
     this._tempQuestionPoints = q.points || 1;
-    this._tempChoice0 = (q.choices || [])[0] || "";
-    this._tempChoice1 = (q.choices || [])[1] || "";
-    this._tempChoice2 = (q.choices || [])[2] || "";
-    this._tempChoice3 = (q.choices || [])[3] || "";
+    const choices = q.choices || [];
+    this._tempChoice0 = this._getChoiceText(choices[0]) || "";
+    this._tempChoice1 = this._getChoiceText(choices[1]) || "";
+    this._tempChoice2 = this._getChoiceText(choices[2]) || "";
+    this._tempChoice3 = this._getChoiceText(choices[3]) || "";
+    this._tempChoiceImage0 = this._getChoiceImage(choices[0]) || "";
+    this._tempChoiceImage1 = this._getChoiceImage(choices[1]) || "";
+    this._tempChoiceImage2 = this._getChoiceImage(choices[2]) || "";
+    this._tempChoiceImage3 = this._getChoiceImage(choices[3]) || "";
     this._tempCorrectIndex = q.correctIndex != null ? q.correctIndex.toString() : "0";
     this._tempCorrectAnswers = q.correctAnswers || [];
     this._tempLeftItems = q.leftItems || ["", ""];
@@ -1262,7 +1302,14 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
     if (this._tempQuestionPoints > 1) updated.points = this._tempQuestionPoints;
 
     if (qType === "mc") {
-      updated.choices = [this._tempChoice0.trim(), this._tempChoice1.trim(), this._tempChoice2.trim(), this._tempChoice3.trim()].filter(c => c);
+      updated.choices = [0, 1, 2, 3]
+        .map(i => {
+          const text = this[`_tempChoice${i}`]?.trim();
+          if (!text) return null;
+          const img = this[`_tempChoiceImage${i}`]?.trim();
+          return img ? { text, image: img } : text;
+        })
+        .filter(Boolean);
       if (this._tempCorrectAnswers.length > 1) updated.correctAnswers = [...this._tempCorrectAnswers];
       else updated.correctIndex = parseInt(this._tempCorrectIndex, 10);
     } else if (qType === "pgk") {
@@ -1417,10 +1464,16 @@ class ExplodeQuiz extends I18NMixin(DDDSuper(LitElement)) {
         }
 
         .question-text {
-          font-size: var(--ddd-font-size-xl);
-          font-weight: var(--ddd-font-weight-bold);
-          margin-bottom: var(--ddd-spacing-6);
-          color: var(--ddd-theme-secondary);
+          font-size: 1rem;
+          font-weight: normal;
+          line-height: 1.6;
+          text-align: justify;
+          color: var(--ddd-theme-on-surface, #333);
+          background: #f8f9fa;
+          border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
+          padding: 14px 18px;
+          border-radius: 0 8px 8px 0;
+          margin-bottom: var(--ddd-spacing-6, 24px);
         }
 
         .answer-grid {

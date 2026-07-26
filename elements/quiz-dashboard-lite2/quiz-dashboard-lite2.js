@@ -19,7 +19,6 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
       sheetName: { type: String, attribute: "sheet-name" },
       viewMode: { type: String, attribute: "view-mode" },
       quizTabHidden: { type: Boolean, attribute: "quiz-tab-hidden", reflect: true },
-      gradebookHidden: { type: Boolean, attribute: "gradebook-hidden", reflect: true },
       _spreadsheetId: { state: true },
       _activeTab: { state: true },
       _successMsg: { state: true },
@@ -33,8 +32,7 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
     this.appsScriptUrl = "";
     this.sheetName = "Pertemuan";
     this.viewMode = "student";
-    this.quizTabHidden = false;
-    this.gradebookHidden = false; // "student" atau "lecturer"
+    this.quizTabHidden = false; // "student" atau "lecturer"
     this._user = null;
     this._spreadsheetId = "";
     this._activeTab = 0;
@@ -234,14 +232,12 @@ class QuizDashboardLite2 extends I18NMixin(DDDSuper(LitElement)) {
             <engagement-score></engagement-score>
           </div>
           <div style="margin-top: var(--ddd-spacing-6);">
-            ${!this.gradebookHidden ? html`
-              <transparent-gradebook
-                .appsScriptUrl="${this.appsScriptUrl}"
-                .studentId="${this._user?.studentId || ''}"
-                .studentName="${this._user?.nama || ''}"
-                .viewMode="${this.viewMode}">
-              </transparent-gradebook>
-            ` : ""}
+            <transparent-gradebook
+              .appsScriptUrl="${this.appsScriptUrl}"
+              .studentId="${this._user?.studentId || ''}"
+              .studentName="${this._user?.nama || ''}"
+              .viewMode="${this.viewMode}">
+            </transparent-gradebook>
           </div>
         ` : html`
           <h2 style="color: var(--ddd-theme-primary);">${this.t.tabGuide}</h2>

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial v4 — Bug Fixes + New Features</title>
+  <style>
+    body { padding: 24px; max-width: 960px; margin: 0 auto; font-family: system-ui; background: #f4f6f9; color: #333; }
+    h1 { color: #002f6c; font-size: 22px; border-bottom: 3px solid #002f6c; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 16px; margin-top: 28px; border-left: 4px solid #007bff; padding-left: 10px; }
+    h3 { color: #555; font-size: 14px; margin-top: 16px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 14px 0; border: 1px solid #e0e0e0; }
+    .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin: 2px; }
+    .tag-fix { background: #fff3cd; color: #856404; }
+    .tag-feat { background: #cce5ff; color: #004085; }
+    .tag-new { background: #d4edda; color: #155724; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+    th { background: #f0f4f8; padding: 8px; text-align: left; border-bottom: 2px solid #ddd; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    .file { font-family: monospace; color: #007bff; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>📚 Tutorial v4 — Bug Fixes + New Features</h1>
+  <p style="color:#666;font-size:13px;">Quiz Dashboard Lite2 — 26 Juli 2026</p>
+
+  <!-- RINGKASAN -->
+  <div class="card">
+    <h3>Ringkasan v4</h3>
+    <table>
+      <thead><tr><th>Type</th><th>Item</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td>TransparentGradebook <code>show-after-quiz</code> tidak kerja</td><td>✅ Fixed — listener <code>quiz-saved</code> ditambahkan</td></tr>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td><code>gradebook-hidden</code> menyembunyikan element</td><td>✅ Removed — selalu render, visibility internal</td></tr>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td>Edit button tidak aktif di question screen</td><td>✅ Fixed — guard update + button di question screen</td></tr>
+        <tr><td><span class="tag tag-feat">BARU</span></td><td>Per-Choice Image URL</td><td>✅ Implemented — text + image per choice</td></tr>
+        <tr><td><span class="tag tag-feat">BARU</span></td><td>Matching Partial Score</td><td>✅ Implemented — per-pair scoring</td></tr>
+        <tr><td><span class="tag tag-fix">FIX</span></td><td>Question text stimulus styling</td><td>✅ Fixed — left border + readable typography</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FIX 1 -->
+  <h2>Fix 1: TransparentGradebook <code>show-after-quiz</code></h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;"><strong>Root cause:</strong> TransparentGradebook tidak punya listener untuk event <code>quiz-saved</code> di connectedCallback. Listener hanya ada di ActivityLogger. Jadi <code>_quizCompleted</code> tetap <code>false</code> selamanya.</p>
+
+    <h3>Fix</h3>
+    <pre>// attendance-system.js — TransparentGradebook
+connectedCallback() {
+  super.connectedCallback();
+  this._reloadHandler = () => { /* ... */ };
+  this._quizCompleteHandler = () => { this._quizCompleted = true; };
+  window.addEventListener("a3-activity-logged", this._reloadHandler);
+  window.addEventListener("a3-force-reload", this._reloadHandler);
+  window.addEventListener("quiz-saved", this._quizCompleteHandler);  // ← BARU
+  this._fetchScores();
+  this._fetchRoster();
+}
+
+disconnectedCallback() {
+  window.removeEventListener("a3-activity-logged", this._reloadHandler);
+  window.removeEventListener("a3-force-reload", this._reloadHandler);
+  window.removeEventListener("quiz-saved", this._quizCompleteHandler);  // ← BARU
+  super.disconnectedCallback();
+}</pre>
+
+    <h3>Logika <code>_shouldShowGradebook()</code></h3>
+    <pre>_shouldShowGradebook() {
+  if (!this.showAfterQuiz &amp;&amp; !this.showAfterDate) return true;
+  if (this.showAfterQuiz &amp;&amp; !this._quizCompleted) return false;
+  if (this.showAfterDate &amp;&amp; new Date() &lt; new Date(this.showAfterDate)) return false;
+  return true;
+}</pre>
+
+    <h3>Penggunaan</h3>
+    <pre>&lt;quiz-dashboard-lite2 view-mode="student" ...&gt;
+  &lt;!-- gradebook ada di dalam dashboard, dikontrol via --&gt;
+  &lt;transparent-gradebook
+    show-after-quiz
+    show-after-date="2026-08-15T00:00:00"&gt;
+  &lt;/transparent-gradebook&gt;
+&lt;/quiz-dashboard-lite2&gt;</pre>
+  </div>
+
+  <!-- FIX 2 -->
+  <h2>Fix 2: <code>gradebook-hidden</code> Removed</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;"><strong>Masalah:</strong> Saat <code>gradebook-hidden=true</code>, element <code>&lt;transparent-gradebook&gt;</code> tidak di-render ke DOM. Element tidak ada → tidak bisa listen event → tidak bisa show.</p>
+
+    <h3>Fix</h3>
+    <pre>// quiz-dashboard-lite2.js
+// Property gradebookHidden DIHAPUS
+// Constructor: this.gradebookHidden = false; DIHAPUS
+
+// Render — SELALU render gradebook
+&lt;transparent-gradebook
+  .appsScriptUrl="${this.appsScriptUrl}"
+  .studentId="${this._user?.studentId || ''}"
+  .studentName="${this._user?.nama || ''}"
+  .viewMode="${this.viewMode}"&gt;
+&lt;/transparent-gradebook&gt;</pre>
+
+    <p style="font-size:13px;color:#059669;"><strong>Sekarang gradebook selalu ada di DOM</strong>, dengan logic internal:
+    <ul>
+      <li>Default: langsung tampil</li>
+      <li><code>show-after-quiz</code>: tunggu <code>quiz-saved</code> event</li>
+      <li><code>show-after-date</code>: tunggu sampai tanggal tertentu</li>
+    </ul>
+    </p>
+  </div>
+
+  <!-- FIX 3 -->
+  <h2>Fix 3: Edit Button dari Question Screen</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;"><strong>Masalah:</strong> <code>_openEditor()</code> hanya izinkan dari <code>"result"</code> screen. Tombol edit hanya muncul di result screen. User tidak bisa edit dari question screen.</p>
+
+    <h3>Fix</h3>
+    <pre>// _openEditor() — izinkan dari result ATAU question
+_openEditor() {
+  if (this._editing) return;
+  if (this._screen !== "result" &amp;&amp; this._screen !== "question") return;
+  this._editing = true;
+  this._editingIndex = -1;
+  this._tempQuestions = JSON.parse(JSON.stringify(this.questions));
+  this._screen = "editor";
+}</pre>
+
+    <h3>Tombol Edit di Question Screen</h3>
+    <pre>// _renderQuestionScreen() — tambah di bawah feedback
+${this.editable ? html`
+  &lt;button class="edit-questions-btn"
+    style="margin-top:12px;font-size:12px;padding:6px 12px;"
+    @click="${this._openEditor}"&gt;
+    ✏️ Edit Soal
+  &lt;/button&gt;
+` : ""}</pre>
+  </div>
+
+  <!-- FEATURE: Per-Choice Image -->
+  <h2>Feature: Per-Choice Image URL</h2>
+  <div class="card">
+    <p style="font-size:13px;">Setiap pilihan jawaban sekarang bisa punya URL gambar sendiri. Backward compatible dengan format lama (string).</p>
+
+    <h3>Format Data</h3>
+    <pre>{
+  "type": "mc",
+  "question": "Logo mana yang untuk web development?",
+  "choices": [
+    { "text": "JavaScript", "image": "https://.../js.png" },
+    "Python",
+    { "text": "Java", "image": "https://.../java.png" },
+    "C++"
+  ],
+  "correctIndex": 0
+}</pre>
+
+    <h3>Helper Methods</h3>
+    <pre>_getChoiceText(choice) {
+  return typeof choice === 'string' ? choice : (choice?.text || '');
+}
+_getChoiceImage(choice) {
+  return typeof choice === 'string' ? null : (choice?.image || null);
+}</pre>
+
+    <h3>Editor Fields</h3>
+    <p style="font-size:13px;">Di editor HAXcms / edit mode, setiap pilihan sekarang punya:</p>
+    <ul style="font-size:13px;">
+      <li>Input text pilihan (seperti sebelumnya)</li>
+      <li>Input URL gambar (baru)</li>
+      <li>Checkbox "Benar"</li>
+      <li>Preview thumbnail (jika URL diisi)</li>
+    </ul>
+
+    <h3>Display</h3>
+    <pre>// Button pilihan sekarang tampilkan gambar di atas text:
+&lt;button class="${btnClass}"&gt;
+  ${this._getChoiceImage(choice) ? html`
+    &lt;img src="${this._getChoiceImage(choice)}" style="max-height:60px;border-radius:6px;"&gt;
+  ` : ""}
+  ${this._getChoiceText(choice)}
+&lt;/button&gt;</pre>
+  </div>
+
+  <!-- FEATURE: Matching Partial -->
+  <h2>Feature: Matching Partial Score</h2>
+  <div class="card">
+    <p style="font-size:13px;"><strong>Sebelum:</strong> Semua-atau-tidak. 1 salah = 0 poin.</p>
+    <p style="font-size:13px;"><strong>Sekarang:</strong> Skor proporsional. 4 pasangan points=4, siswa jawab 2 benar → 2 poin.</p>
+
+    <pre>_submitMatching() {
+  let correctCount = 0;
+  for (let i = 0; i &lt; left.length; i++) {
+    if (this._matchAnswers[i] === correctPairs[i]) correctCount++;
+  }
+  const earned = Math.round((correctCount / left.length) * (q.points || 1));
+  this._score += earned;
+  
+  if (!this.hideConfetti &amp;&amp; correctCount === left.length) {
+    this._fireConfetti();
+  }
+}</pre>
+
+    <h3>Feedback</h3>
+    <table>
+      <thead><tr><th>Hasil</th><th>Feedback</th><th>Confetti</th></tr></thead>
+      <tbody>
+        <tr><td>Semua benar (4/4)</td><td>"Mantap, Benar! (4/4 pasangan, +4 poin)"</td><td>✅ Ya</td></tr>
+        <tr><td>Sebagian (2/4)</td><td>"2/4 pasangan benar (+2 poin). Lanjutkan!"</td><td>❌ Tidak</td></tr>
+        <tr><td>Salah semua (0/4)</td><td>"Yah, Salah. Jawaban benar: 1→C, 2→B..."</td><td>❌ Tidak</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FIX 6: Stimulus -->
+  <h2>Fix 6: Question Text Stimulus Styling</h2>
+  <div class="card">
+    <p style="font-size:13px;color:#666;"><strong>Sebelum:</strong> Text soal terlalu besar, tebal, tanpa container yang jelas.</p>
+    <p style="font-size:13px;"><strong>Sekarang:</strong> Text soal dalam container stimulus box — readable, justified, dengan left border accent.</p>
+
+    <pre>.question-text {
+  font-size: 1rem;
+  font-weight: normal;
+  line-height: 1.6;
+  text-align: justify;
+  color: var(--ddd-theme-on-surface, #333);
+  background: #f8f9fa;
+  border-left: 4px solid var(--ddd-theme-polaris-primary, #007bff);
+  padding: 14px 18px;
+  border-radius: 0 8px 8px 0;
+  margin-bottom: 24px;
+}</pre>
+
+    <h3>Visual Result</h3>
+    <div style="background: #f8f9fa; border-left: 4px solid #007bff; padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 12px 0; line-height: 1.6; font-size: 1rem; text-align: justify;">
+      Bacalah teks berikut! Energi biomassa adalah energi yang dihasilkan dari bahan organik seperti limbah pertanian.
+    </div>
+  </div>
+
+  <!-- VIEWMODE -->
+  <h2>📋 Penjelasan viewMode</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>viewMode</th><th>Yang Tampil</th></tr></thead>
+      <tbody>
+        <tr><td><code>"student"</code></td><td>Transparansi nilai sendiri (read-only). Tombol ⚙️ Mode Dosen <strong>TIDAK</strong> tampil.</td></tr>
+        <tr><td><code>"lecturer"</code></td><td>+ Tombol ⚙️ Mode Dosen, konfigurasi bobot, generate rapor, input nilai UTS/UAS manual.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>⚠️ Jangan Duplikat Atribut</h3>
+    <pre>&lt;!-- ❌ SALAH — "lecturer" menimpa "student" --&gt;
+&lt;quiz-dashboard-lite2 view-mode="student" view-mode="lecturer"&gt;
+
+&lt;!-- ✅ BENAR — pilih satu --&gt;
+&lt;quiz-dashboard-lite2 view-mode="student"&gt;</pre>
+  </div>
+
+  <!-- DAFTAR PROPERTIES -->
+  <h2>📋 Daftar Semua Properties</h2>
+  <div class="card">
+    <h3>explode-quiz</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideAnswers</code></td><td><code>hide-answers</code></td><td>false</td><td>Sembunyikan feedback benar/salah</td></tr>
+        <tr><td><code>hideConfetti</code></td><td><code>hide-confetti</code></td><td>false</td><td>Nonaktifkan confetti</td></tr>
+        <tr><td><code>shuffleChoices</code></td><td><code>shuffle-choices</code></td><td>false</td><td>Acak urutan pilihan</td></tr>
+        <tr><td><code>quizCategory</code></td><td><code>quiz-category</code></td><td>"formatif"</td><td>formatif/ulangan_harian/uts/uas</td></tr>
+        <tr><td><code>editable</code></td><td><code>editable</code></td><td>false</td><td>Tampilkan tombol edit</td></tr>
+      </tbody>
+    </table>
+
+    <h3>assignment-forum</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>hideDelete</code></td><td><code>hide-delete</code></td><td>false</td><td>Sembunyikan tombol hapus</td></tr>
+        <tr><td><code>viewMode</code></td><td><code>view-mode</code></td><td>"student"</td><td>student/lecturer</td></tr>
+        <tr><td><code>forumApiUrl</code></td><td><code>forum-api-url</code></td><td>""</td><td>URL code.gs terpisah</td></tr>
+      </tbody>
+    </table>
+
+    <h3>quiz-dashboard-lite2</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>viewMode</code></td><td><code>view-mode</code></td><td>"student"</td><td>student/lecturer</td></tr>
+        <tr><td><code>quizTabHidden</code></td><td><code>quiz-tab-hidden</code></td><td>false</td><td>Sembunyikan tab kuis</td></tr>
+      </tbody>
+    </table>
+
+    <h3>transparent-gradebook</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td><code>showAfterQuiz</code></td><td><code>show-after-quiz</code></td><td>false</td><td>Tampil setelah kuis selesai</td></tr>
+        <tr><td><code>showAfterDate</code></td><td><code>show-after-date</code></td><td>""</td><td>Tampil setelah tanggal (ISO)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align:center;padding:30px;color:#aaa;font-size:12px;">
+    Quiz Dashboard Lite2 — Tutorial v4 — 26 Juli 2026
+  </div>
+</body>
+</html>
