@@ -1,0 +1,926 @@
+/**
+ * Google Apps Script — Quiz, Attendance & Auth Handler (v5 FINAL CLEAN)
+ */
+function doGet(e) {
+  const action = (e && e.parameter && e.parameter.action) || "list";
+  const name = (e && e.parameter && e.parameter.name) || "";
+  const sheet = (e && e.parameter && e.parameter.sheet) || "";
+  const studentId = (e && e.parameter && e.parameter.studentId) || "";
+  
+  try {
+    switch (action) {
+      case "register": return response(registerUser(e.parameter));
+      case "login": return response(loginUser(e.parameter));
+      case "verify": return response(verifyUser(studentId));
+      case "submit": {
+        const result = saveQuiz(e.parameter);
+        updateSummary();
+        return response({ status: "success", message: "Hasil kuis tersimpan", data: result });
+      }
+      case "activity": {
+        const result = saveAttendance(e.parameter);
+        try { updateSummary(); } catch (_) {}
+        return response({ status: "success", message: "Aktivitas tersimpan", data: result });
+      }
+      // ✅ FIX: Dipindah KE DALAM switch agar bisa terpanggil
+      case "logActivity": return response(logActivity(e.parameter));
+      case "getActivityHistory": return response(getActivityHistory(e.parameter));
+      
+      case "leaderboard": return response(getLeaderboard());
+      case "summary": return response(getStudentSummary(name));
+      case "pertemuan": return response(getPertemuanData(sheet));
+      case "aktivitas": return response(getAktivitasLog(sheet, name));
+      case "getScores": return response(getStudentScores(studentId));
+      case "getStudentRoster": return response(getStudentRoster());
+      case "generateReport": return response(generateReport(e.parameter));
+      case "getBankSoal": return response(getBankSoal(e.parameter));
+      case "list":
+      default: return response(getSheetList());
+    }
+  } catch (error) {
+    return response({ status: "error", message: error.toString() });
+  }
+}
+
+function doPost(e) {
+  try {
+    let data = {};
+    if (e.postData && e.postData.contents) {
+      try { data = JSON.parse(e.postData.contents); } catch (_) {}
+    }
+    if (e.parameter) {
+      data.name = data.name || e.parameter.name;
+      data.score = data.score || (e.parameter.score ? parseInt(e.parameter.score) : null);
+      data.sheet = data.sheet || e.parameter.sheet || e.parameter.sheetName || "Pertemuan";
+      data.timestamp = data.timestamp || e.parameter.timestamp;
+      data.totalQuestions = data.totalQuestions || (e.parameter.totalQuestions ? parseInt(e.parameter.totalQuestions) : 5);
+      data.type = data.type || e.parameter.type || "quiz";
+      data.activityType = data.activityType || e.parameter.activityType;
+      data.description = data.description || e.parameter.description;
+    }
+
+    if (data.action === "register") return response(registerUser(data));
+    if (data.action === "login") return response(loginUser(data));
+    if (data.action === "verify") return response(verifyUser(data.studentId || ""));
+    if (data.action === "getScores") return response(getStudentScores(data.studentId || ""));
+    if (data.action === "getStudentRoster") return response(getStudentRoster());
+    if (data.action === "generateReport") return response(generateReport(data));
+    if (data.action === "setManualScore") return response(setManualScore(data));
+    if (data.action === "getBankSoal") return response(getBankSoal(data));
+
+    if (data.studentId) {
+      const user = verifyUser(data.studentId);
+      if (user.status === "success") {
+        data.name = user.nama;
+      } else {
+        data.name = data.name || e.parameter.name;
+      }
+    } else {
+      data.name = data.name || e.parameter.name;
+    }
+
+    if (!data.name) return response({ status: "error", message: "Nama wajib diisi." });
+    if (!data.sheet) return response({ status: "error", message: "Nama sheet/pertemuan wajib diisi." });
+
+    let result;
+    if (data.type === "attendance" || data.activityType) {
+      result = saveAttendance(data);
+    } else {
+      if (data.score === null || data.score === undefined) {
+        return response({ status: "error", message: "Skor wajib diisi untuk tipe quiz." });
+      }
+      result = saveQuiz(data);
+    }
+    try { updateSummary(); } catch (_) {}
+    return response({ status: "success", message: "Data tersimpan!", data: result });
+  } catch (error) {
+    return response({ status: "error", message: "Error: " + error.toString() });
+  }
+}
+
+// --- FUNGSI PENYIMPANAN ---
+function getValidTimestamp_(value) {
+  const parsed = value ? new Date(value) : new Date();
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function findStudentRow_(sheet, key, studentIdCol, fallbackCols) {
+  if (!key || sheet.getLastRow() <= 1) return -1;
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const studentId = String(row[studentIdCol] || "").trim();
+    const fallbackKey = fallbackCols.map(col => String(row[col] || "").trim()).join("|");
+    if (studentId === key || fallbackKey === key) return i + 1;
+  }
+  return -1;
+}
+
+const QUIZ_SHEET_NAME = "pertemuan-kuis";
+const QUIZ_HEADERS = ["Timestamp", "Date", "Kode Materi", "Nama", "Skor (%)", "Total Soal", "Status", "Student ID", "NIS", "Absen", "Kelas", "Kategori Kuis"];
+
+function saveQuiz(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = QUIZ_SHEET_NAME;
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    setupHeader(sheet, QUIZ_HEADERS);
+  } else if (sheet.getLastColumn() < QUIZ_HEADERS.length) {
+    sheet.getRange(1, 1, 1, QUIZ_HEADERS.length).setValues([QUIZ_HEADERS]);
+  }
+  const score = parseInt(data.score) || 0;
+  const totalSoal = parseInt(data.totalQuestions) || 5;
+  const status = score >= 70 ? "LULUS" : "TIDAK LULUS";
+  const timestamp = getValidTimestamp_(data.timestamp);
+  const formattedTime = Utilities.formatDate(timestamp, "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
+  const formattedDate = Utilities.formatDate(timestamp, "Asia/Jakarta", "yyyy-MM-dd");
+  const kodeMateri = String(data.tag || data.sheet || "Pertemuan").trim();
+  const studentId = String(data.studentId || "").trim();
+  const nis = String(data.nis || "").trim();
+  const absen = String(data.absen || "").trim();
+  const kelas = String(data.kelas || "").trim();
+  const quizCategory = String(data.quizCategory || data.category || "formatif").toLowerCase();
+
+  // UPSERT per siswa + satu kode materi → simpan nilai TERBAIK saja
+  const existingRow = findQuizRow_(sheet, studentId, nis, absen, kelas, data.name, kodeMateri);
+  if (existingRow > 0) {
+    const existingScore = parseInt(sheet.getRange(existingRow, 5).getValue()) || 0;
+    if (score <= existingScore) {
+      return { sheet: sheetName, row: existingRow, type: "quiz", name: data.name, score: score, status: status, category: quizCategory, skipped: true, message: "Skor " + score + "% tidak lebih baik dari nilai terbaik (" + existingScore + "%), baris tidak diubah." };
+    }
+    const rowValues = [formattedTime, formattedDate, kodeMateri, data.name, score, totalSoal, status, studentId, nis, absen, kelas, quizCategory];
+    sheet.getRange(existingRow, 1, 1, QUIZ_HEADERS.length).setValues([rowValues]);
+    sheet.getRange(existingRow, 1, 1, QUIZ_HEADERS.length).setBackground(score >= 70 ? "#d1fae5" : "#fee2e2");
+    sheet.autoResizeColumns(1, QUIZ_HEADERS.length);
+    return { sheet: sheetName, row: existingRow, type: "quiz", name: data.name, score: score, status: status, category: quizCategory, updated: true };
+  }
+
+  sheet.appendRow([formattedTime, formattedDate, kodeMateri, data.name, score, totalSoal, status, studentId, nis, absen, kelas, quizCategory]);
+  const targetRow = sheet.getLastRow();
+  const range = sheet.getRange(targetRow, 1, 1, QUIZ_HEADERS.length);
+  range.setBackground(score >= 70 ? "#d1fae5" : "#fee2e2");
+  sheet.autoResizeColumns(1, QUIZ_HEADERS.length);
+  return { sheet: sheetName, row: targetRow, type: "quiz", name: data.name, score: score, status: status, category: quizCategory };
+}
+
+function findQuizRow_(sheet, studentId, nis, absen, kelas, name, kodeMateri) {
+  if (sheet.getLastRow() <= 1) return -1;
+  const key = studentId || [nis, absen, kelas, name].join("|");
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowStudentId = String(row[7] || "").trim();
+    const rowKey = rowStudentId || [row[8], row[9], row[10], row[3]].map(v => String(v || "").trim()).join("|");
+    const rowKodeMateri = String(row[2] || "").trim();
+    if (rowKey === key && rowKodeMateri === kodeMateri) return i + 1;
+  }
+  return -1;
+}
+
+function countActivityForStudent_(sheet, studentId, nis, absen, kelas, name, activityType) {
+  if (sheet.getLastRow() <= 1) return 0;
+  const key = studentId || [nis, absen, kelas, name].join("|");
+  const values = sheet.getDataRange().getValues();
+  let count = 0;
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowType = String(row[4] || "").trim();
+    const rowStudentId = String(row[7] || "").trim();
+    const rowKey = rowStudentId || [row[8], row[9], row[10], row[3]].map(v => String(v || "").trim()).join("|");
+    if (rowType === activityType && rowKey === key) count++;
+  }
+  return count;
+}
+
+function countAllActivitiesForStudent_(sheet, studentId, nis, absen, kelas, name) {
+  if (sheet.getLastRow() <= 1) return 0;
+  const key = studentId || [nis, absen, kelas, name].join("|");
+  const values = sheet.getDataRange().getValues();
+  let count = 0;
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowStudentId = String(row[7] || "").trim();
+    const rowKey = rowStudentId || [row[8], row[9], row[10], row[3]].map(v => String(v || "").trim()).join("|");
+    if (rowKey === key) count++;
+  }
+  return count;
+}
+
+function saveAttendance(data) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = data.sheet + " - Aktivitas";
+  let sheet = ss.getSheetByName(sheetName);
+  const headers = ["Timestamp", "Tanggal", "Hari", "Nama", "Tipe Aktivitas", "Deskripsi", "Count", "Student ID", "NIS", "Absen", "Kelas", "kdMateri"];
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    setupHeader(sheet, headers);
+  } else if (sheet.getLastColumn() < headers.length) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  const timestamp = getValidTimestamp_(data.timestamp);
+  const formattedTime = Utilities.formatDate(timestamp, "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
+  const formattedDate = Utilities.formatDate(timestamp, "Asia/Jakarta", "dd/MM/yyyy");
+  const dayName = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"][timestamp.getDay()];
+  const activityType = data.activityType || "activity";
+  const studentId = String(data.studentId || "").trim();
+  const nis = String(data.nis || "").trim();
+  const absen = String(data.absen || "").trim();
+  const kelas = String(data.kelas || "").trim();
+  
+  if (activityType === "reading" && countActivityForStudent_(sheet, studentId, nis, absen, kelas, data.name, "reading") >= 15) {
+    return { sheet: sheetName, row: sheet.getLastRow(), type: activityType, skipped: true, message: "Reading sudah mencapai batas 15 kali." };
+  }
+  if (countAllActivitiesForStudent_(sheet, studentId, nis, absen, kelas, data.name) >= 50) {
+    return { sheet: sheetName, row: sheet.getLastRow(), type: activityType, skipped: true, message: "Aktivitas sudah mencapai batas 50 kali per pertemuan." };
+  }
+  
+  sheet.appendRow([formattedTime, formattedDate, dayName, data.name, activityType, data.description || "Aktivitas", 1, studentId, nis, absen, kelas, data.kdMateri || ""]);
+  sheet.autoResizeColumns(1, 12);
+  return { sheet: sheetName, row: sheet.getLastRow(), type: data.activityType };
+}
+
+function setupHeader(sheet, headers) {
+  const range = sheet.getRange(1, 1, 1, headers.length);
+  range.setValues([headers]);
+  range.setFontWeight("bold");
+  range.setBackground("#6750a4");
+  range.setFontColor("white");
+  range.setHorizontalAlignment("center");
+}
+
+function updateSummary() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const allSheets = ss.getSheets();
+  const studentStats = {};
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Rangkuman" || sheet.getLastRow() <= 1) return;
+    const isUnified = name === QUIZ_SHEET_NAME;
+    const isKuis = isUnified || name.includes(" - Kuis");
+    const isAktivitas = name.includes(" - Aktivitas");
+    if (!isKuis && !isAktivitas) return;
+    const idxNama = (isAktivitas || isUnified) ? 3 : 1;
+    const idxSid = (isAktivitas || isUnified) ? 7 : 5;
+    const idxNis = (isAktivitas || isUnified) ? 8 : 6;
+    const idxAbsen = (isAktivitas || isUnified) ? 9 : 7;
+    const idxKelas = (isAktivitas || isUnified) ? 10 : 8;
+    const idxScore = isUnified ? 4 : 2;
+    const idxStatus = isUnified ? 6 : 4;
+    const idxCategory = isUnified ? 11 : 9;
+    const pertemuanName = name.replace(" - Kuis", "").replace(" - Aktivitas", "");
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const pName = isUnified ? String(row[2] || "").trim() || pertemuanName : pertemuanName;
+      const studentName = String(row[idxNama] || "").trim();
+      const studentId = String(row[idxSid] || "").trim();
+      if (!studentName) continue;
+      const key = studentId || studentName;
+      if (!studentStats[key]) {
+        studentStats[key] = {
+          studentId: studentId, nis: String(row[idxNis] || ""), absen: String(row[idxAbsen] || ""),
+          kelas: String(row[idxKelas] || ""), nama: studentName, totalKuis: 0, totalScore: 0, highestScore: 0, lowestScore: 100,
+          reading: 0, quizActivity: 0, discussion: 0, download: 0, assignment: 0, totalActivity: 0, pertemuan: [], lastQuizStatus: "",
+          kuisFormatif: 0, kuisSumatif: 0, skorUts: 0, skorUas: 0
+        };
+      }
+      const s = studentStats[key];
+      if (isKuis) {
+        const score = parseInt(row[idxScore]) || 0;
+        const category = String(row[idxCategory] || "formatif").toLowerCase();
+        s.totalKuis++; s.totalScore += score; s.quizActivity++;
+        if (score > s.highestScore) s.highestScore = score;
+        if (score < s.lowestScore) s.lowestScore = score;
+        s.lastQuizStatus = row[idxStatus] || "";
+        if (category === "formatif") s.kuisFormatif++;
+        else if (category === "sumatif" || category === "s") s.kuisSumatif++;
+        else if (category === "uts") s.skorUts = Math.max(s.skorUts, score);
+        else if (category === "uas") s.skorUas = Math.max(s.skorUas, score);
+      }
+      if (isAktivitas) {
+        const type = row[4] || "activity";
+        s.totalActivity++;
+        if (type === "reading") s.reading = Math.min(s.reading + 1, 15);
+        else if (type === "quiz") s.quizActivity++;
+        else if (type === "discussion") s.discussion++;
+        else if (type === "download") s.download++;
+        else if (type === "assignment") s.assignment++;
+      }
+      if (!s.pertemuan.includes(pName)) s.pertemuan.push(pName);
+    }
+  });
+  
+  let summarySheet = ss.getSheetByName("Rangkuman");
+  if (!summarySheet) { summarySheet = ss.insertSheet("Rangkuman"); }
+  summarySheet.clear();
+  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Total Kuis", "Rata-rata Skor", "Skor Tertinggi", "Skor Terendah", "Total Aktivitas", "Reading", "Quiz Activity", "Assignment", "Discussion", "Download", "Kuis Formatif", "Kuis Sumatif", "Skor UTS", "Skor UAS", "Jumlah Pertemuan", "Status Kuis Terakhir"];
+  const hRange = summarySheet.getRange(1, 1, 1, headers.length);
+  hRange.setValues([headers]);
+  hRange.setFontWeight("bold");
+  hRange.setBackground("#6750a4");
+  hRange.setFontColor("white");
+  hRange.setHorizontalAlignment("center");
+  
+  let rowNum = 2;
+  Object.entries(studentStats).forEach(([, stats]) => {
+    const avg = stats.totalKuis > 0 ? Math.round(stats.totalScore / stats.totalKuis) : 0;
+    summarySheet.getRange(rowNum, 1, 1, headers.length).setValues([[
+      stats.studentId, stats.nis, stats.nama, stats.absen, stats.kelas,
+      stats.totalKuis, avg, stats.highestScore, stats.lowestScore,
+      stats.totalActivity, stats.reading, stats.quizActivity, stats.assignment, stats.discussion, stats.download,
+      stats.kuisFormatif, stats.kuisSumatif, stats.skorUts, stats.skorUas,
+      stats.pertemuan.length, stats.lastQuizStatus || "N/A"
+    ]]);
+    if (stats.lastQuizStatus === "LULUS") summarySheet.getRange(rowNum, 1, 1, headers.length).setBackground("#d1fae5");
+    else if (stats.lastQuizStatus === "TIDAK LULUS") summarySheet.getRange(rowNum, 1, 1, headers.length).setBackground("#fee2e2");
+    rowNum++;
+  });
+  summarySheet.autoResizeColumns(1, headers.length);
+}
+
+function getSheetList() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const list = ss.getSheets().map(s => s.getName()).filter(n => n !== "Rangkuman");
+  return { status: "ok", pertemuan: list };
+}
+
+/**
+ * Bank Soal AKM. Sheet "Bank Soal" kolom:
+ * ID | Kategori (campur/literasi/numerasi) | Tipe (mc/pgk/matching/shortAnswer) | Soal | Detail (JSON) | Gambar | Poin
+ */
+function getBankSoal(params) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Bank Soal");
+  if (!sheet || sheet.getLastRow() <= 1) {
+    return { status: "error", message: "Sheet 'Bank Soal' belum ada atau kosong. Buat kolom: ID | Kategori | Tipe | Soal | Detail | Gambar | Poin." };
+  }
+  const rows = sheet.getDataRange().getValues();
+  const headers = rows[0].map(h => String(h).trim());
+  const kategori = String((params && params.kategori) || "").trim().toLowerCase();
+  const questions = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = rows[i][idx]; });
+    const rowKategori = String(row.Kategori || row.kategori || "").trim().toLowerCase();
+    if (kategori && kategori !== "campur" && rowKategori !== kategori) continue;
+    if (!row.Tipe && !row.tipe) continue;
+    const q = {
+      type: String(row.Tipe || row.tipe || "mc").trim(),
+      question: String(row.Soal || row.question || "").trim(),
+      points: parseInt(row.Poin || row.points) || 1,
+    };
+    if (row.Gambar || row.image) q.image = String(row.Gambar || row.image);
+    const raw = row.Detail || row.detail;
+    if (raw) {
+      let detail = null;
+      if (typeof raw === "object") detail = raw;
+      else {
+        try { detail = JSON.parse(String(raw)); } catch (e) { detail = null; }
+      }
+      if (detail && typeof detail === "object") {
+        Object.assign(q, detail);
+      } else if (!raw) {
+        continue;
+      }
+    }
+    if (!q.question) continue;
+    questions.push(q);
+  }
+  return { status: "ok", total: questions.length, questions };
+}
+
+function getLeaderboard() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const summarySheet = ss.getSheetByName("Rangkuman");
+  if (!summarySheet || summarySheet.getLastRow() <= 1) return { status: "ok", message: "Belum ada data.", leaderboard: [] };
+  const data = summarySheet.getDataRange().getValues();
+  const headers = data[0];
+  const leaderboard = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = {};
+    headers.forEach((h, idx) => { row[h] = data[i][idx] || ""; });
+    leaderboard.push(row);
+  }
+  leaderboard.sort((a, b) => (parseInt(b["Rata-rata Skor"]) || 0) - (parseInt(a["Rata-rata Skor"]) || 0));
+  return { status: "ok", leaderboard };
+}
+
+function getStudentSummary(studentName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const summarySheet = ss.getSheetByName("Rangkuman");
+  if (!summarySheet) return { status: "error", message: "Sheet Rangkuman belum ada." };
+  const data = summarySheet.getDataRange().getValues();
+  const headers = data[0];
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toLowerCase() === studentName.trim().toLowerCase()) {
+      const row = {};
+      headers.forEach((h, idx) => { row[h] = data[i][idx] || ""; });
+      return { status: "ok", data: row };
+    }
+  }
+  return { status: "not_found", message: "Siswa tidak ditemukan." };
+}
+
+function getPertemuanData(sheetName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const quizSheet = ss.getSheetByName(sheetName + " - Kuis");
+  const result = [];
+  if (quizSheet) {
+    const data = quizSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (!data[i][1]) continue;
+      result.push({ timestamp: data[i][0], nama: data[i][1], skor: parseInt(data[i][2]) || 0, totalSoal: parseInt(data[i][3]) || 5, status: data[i][4] || "" });
+    }
+  }
+  return { status: "ok", pertemuan: sheetName, siswa: result };
+}
+
+function getAktivitasLog(sheetName, studentName) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const actSheet = ss.getSheetByName(sheetName + " - Aktivitas");
+  const result = [];
+  if (actSheet) {
+    const data = actSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const rowName = String(data[i][3] || "").trim().toLowerCase();
+      if (studentName && rowName !== studentName.trim().toLowerCase()) continue;
+      result.push({ timestamp: data[i][0], nama: data[i][3], type: data[i][4] || "", deskripsi: data[i][5] || "", count: data[i][6] || 1 });
+    }
+  }
+  return { status: "ok", pertemuan: sheetName, aktivitas: result };
+}
+
+function getStudentScores(studentId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const reportSheet = ss.getSheetByName("Akumulasi Nilai Rapor");
+  if (reportSheet && reportSheet.getLastRow() > 1) {
+    const data = reportSheet.getDataRange().getValues();
+    const headers = data[0];
+    const idxSid = headers.indexOf("Student ID");
+    const idxNama = headers.indexOf("Nama");
+    const idxKehadiran = headers.indexOf("Kehadiran (skala 100)");
+    const idxUH = headers.indexOf("Rata-rata UH");
+    const idxUTS = headers.indexOf("Skor UTS");
+    const idxUAS = headers.indexOf("Skor UAS");
+    const idxSikap = headers.indexOf("Skor Sikap");
+    const idxKeterampilan = headers.indexOf("Skor Keterampilan");
+    const idxNilaiAkhir = headers.indexOf("Nilai Akhir");
+    const idxGrade = headers.indexOf("Grade");
+    const idxJumlahPertemuan = headers.indexOf("Jumlah Pertemuan");
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idxSid] || "").trim() !== studentId) continue;
+      const manual = getManualScores_()[studentId] || {};
+      return {
+        status: "ok",
+        data: {
+          studentId: data[i][idxSid], nama: data[i][idxNama],
+          kehadiran: parseInt(data[i][idxKehadiran]) || 0,
+          ulanganHarian: { average: parseInt(data[i][idxUH]) || 0, highest: parseInt(data[i][idxUH]) || 0, count: parseInt(data[i][idxJumlahPertemuan]) || 0, all: [] },
+          uts: { highest: manual.uts || parseInt(data[i][idxUTS]) || 0, all: [] },
+          uas: { highest: manual.uas || parseInt(data[i][idxUAS]) || 0, all: [] },
+          sikap: parseInt(data[i][idxSikap]) || 0,
+          keterampilan: parseInt(data[i][idxKeterampilan]) || 0,
+          nilaiAkhir: parseFloat(data[i][idxNilaiAkhir]) || 0,
+          grade: data[i][idxGrade] || "N/A"
+        }
+      };
+    }
+  }
+  
+  const allSheets = ss.getSheets();
+  const result = { studentId: studentId, kehadiran: 0, ulanganHarian: { highest: 0, average: 0, sum: 0, count: 0, all: [] }, uts: { highest: 0, all: [] }, uas: { highest: 0, all: [] }, formatif: { count: 0, all: [] }, sikap: 0, keterampilan: 0 };
+  let quizCount = 0, readingCount = 0, taskCount = 0, forumCount = 0;
+  let attendanceTotal = 0;
+  const attendancePertemuan = {};
+  
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Rangkuman" || name === "Akumulasi Nilai Rapor" || name === "Users") return;
+    const isUnified = name === QUIZ_SHEET_NAME;
+    if (isUnified || name.includes(" - Kuis")) {
+      const idxScore = isUnified ? 4 : 2;
+      const idxCategory = isUnified ? 11 : 9;
+      const idxSid = isUnified ? 7 : 5;
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][idxSid] || "").trim() !== studentId) continue;
+        const score = parseInt(data[i][idxScore]) || 0;
+        const category = String(data[i][idxCategory] || "formatif").toLowerCase();
+        const pertemuan = isUnified ? String(data[i][2] || "").trim() : name.replace(" - Kuis", "");
+        quizCount++;
+        if (category === "ulangan_harian") {
+          result.ulanganHarian.all.push({ score, pertemuan });
+          result.ulanganHarian.sum += score;
+          result.ulanganHarian.count++;
+          if (score > result.ulanganHarian.highest) result.ulanganHarian.highest = score;
+        } else if (category === "uts") {
+          result.uts.all.push({ score, pertemuan });
+          if (score > result.uts.highest) result.uts.highest = score;
+        } else if (category === "uas") {
+          result.uas.all.push({ score, pertemuan });
+          if (score > result.uas.highest) result.uas.highest = score;
+        } else {
+          result.formatif.all.push({ score, pertemuan });
+          result.formatif.count++;
+        }
+      }
+    } else if (name.includes(" - Aktivitas")) {
+      const data = sheet.getDataRange().getValues();
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][7] || "").trim() !== studentId) continue;
+        const type = String(data[i][4] || "").toLowerCase();
+        attendanceTotal++;
+        const pName = name.replace(" - Aktivitas", "");
+        attendancePertemuan[pName] = (attendancePertemuan[pName] || 0) + 1;
+        if (type === "reading") readingCount++;
+        else if (type === "assignment") taskCount++;
+        else if (type === "discussion") forumCount++;
+      }
+    }
+  });
+  
+  if (result.ulanganHarian.count > 0) {
+    result.ulanganHarian.average = Math.round(result.ulanganHarian.sum / result.ulanganHarian.count);
+  }
+  const pCount = Object.keys(attendancePertemuan).length;
+  if (pCount > 0) {
+    result.kehadiran = Math.min(Math.round(attendanceTotal / pCount) * 10, 100);
+  }
+  result.sikap = Math.min(taskCount * 25 + forumCount * 20, 100);
+  result.keterampilan = Math.min(quizCount * 30 + readingCount * 10, 100);
+  const manual = getManualScores_()[studentId] || {};
+  if (manual.uts) result.uts = { highest: manual.uts, all: [{ score: manual.uts, pertemuan: "Manual" }] };
+  if (manual.uas) result.uas = { highest: manual.uas, all: [{ score: manual.uas, pertemuan: "Manual" }] };
+  return { status: "ok", data: result };
+}
+
+function generateReport(weights) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const allSheets = ss.getSheets();
+  const studentStats = {};
+  const manualScores = getManualScores_();
+  const wAtt = (weights && parseInt(weights.attendanceWeight)) || 1;
+  const wUH = (weights && parseInt(weights.ulanganHarianWeight)) || 3;
+  const wUts = (weights && parseInt(weights.utsWeight)) || 2;
+  const wUas = (weights && parseInt(weights.uasWeight)) || 2;
+  const wSk = (weights && parseInt(weights.attitudeWeight)) || 0;
+  const wKr = (weights && parseInt(weights.skillWeight)) || 0;
+  const tw = wAtt + wUH + wUts + wUas + wSk + wKr;
+  
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (name === "Rangkuman" || name === "Akumulasi Nilai Rapor" || name === "Users" || sheet.getLastRow() <= 1) return;
+    const isUnified = name === QUIZ_SHEET_NAME;
+    if (!isUnified && !name.includes(" - Kuis") && !name.includes(" - Aktivitas")) return;
+    const isKuis = isUnified || name.includes(" - Kuis");
+    const isAktivitas = name.includes(" - Aktivitas");
+    const idxNama = (isAktivitas || isUnified) ? 3 : 1;
+    const idxSid = (isAktivitas || isUnified) ? 7 : 5;
+    const idxNis = (isAktivitas || isUnified) ? 8 : 6;
+    const idxAbsen = (isAktivitas || isUnified) ? 9 : 7;
+    const idxKelas = (isAktivitas || isUnified) ? 10 : 8;
+    const idxScore = isUnified ? 4 : 2;
+    const idxCategory = isUnified ? 11 : 9;
+    const pertemuanName = name.replace(" - Kuis", "").replace(" - Aktivitas", "");
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const pName = isUnified ? String(row[2] || "").trim() || pertemuanName : pertemuanName;
+      const studentName = String(row[idxNama] || "").trim();
+      const studentId = String(row[idxSid] || "").trim();
+      if (!studentName) continue;
+      const key = studentId || studentName;
+      if (!studentStats[key]) {
+        studentStats[key] = {
+          studentId: studentId, nis: String(row[idxNis] || ""), absen: String(row[idxAbsen] || ""), kelas: String(row[idxKelas] || ""),
+          nama: studentName, pertemuanActivities: {}, uhScores: [], highestUTS: 0, highestUAS: 0, taskCount: 0, forumCount: 0, quizCount: 0, readingCount: 0
+        };
+      }
+      const s = studentStats[key];
+      if (isKuis) {
+        const score = parseInt(row[idxScore]) || 0;
+        const category = String(row[idxCategory] || "formatif").toLowerCase();
+        if (category === "ulangan_harian") s.uhScores.push(score);
+        else if (category === "uts" && score > s.highestUTS) s.highestUTS = score;
+        else if (category === "uas" && score > s.highestUAS) s.highestUAS = score;
+        s.quizCount++;
+      }
+      if (isAktivitas) {
+        if (!s.pertemuanActivities[pName]) s.pertemuanActivities[pName] = 0;
+        s.pertemuanActivities[pName]++;
+        const actType = String(row[4] || "").toLowerCase();
+        if (actType === "assignment") s.taskCount++;
+        else if (actType === "discussion") s.forumCount++;
+        else if (actType === "reading") s.readingCount++;
+      }
+    }
+  });
+  
+  let reportSheet = ss.getSheetByName("Akumulasi Nilai Rapor");
+  if (reportSheet) reportSheet.clear();
+  else reportSheet = ss.insertSheet("Akumulasi Nilai Rapor");
+  
+  const headers = ["Student ID", "NIS", "Nama", "Absen", "Kelas", "Jumlah Pertemuan", "Rata Aktivitas/Pertemuan", "Kehadiran (skala 100)", "Rata-rata UH", "Skor UTS", "Skor UAS", "Skor Sikap", "Skor Keterampilan", "Nilai Akhir", "Grade"];
+  const hRange = reportSheet.getRange(1, 1, 1, headers.length);
+  hRange.setValues([headers]);
+  hRange.setFontWeight("bold");
+  hRange.setBackground("#6750a4");
+  hRange.setFontColor("white");
+  hRange.setHorizontalAlignment("center");
+  
+  let rowNum = 2;
+  Object.values(studentStats).forEach(s => {
+    const pertemuanCount = Object.keys(s.pertemuanActivities).length;
+    const totalActivities = Object.values(s.pertemuanActivities).reduce((a, b) => a + b, 0);
+    const avgPerPertemuan = pertemuanCount > 0 ? Math.round(totalActivities / pertemuanCount) : 0;
+    const kehadiran = Math.min(avgPerPertemuan * 10, 100);
+    const uh = s.uhScores.length > 0 ? Math.round(s.uhScores.reduce((a, b) => a + b, 0) / s.uhScores.length) : 0;
+    const manual = manualScores[s.studentId] || {};
+    const uts = manual.uts || s.highestUTS;
+    const uas = manual.uas || s.highestUAS;
+    const taskCount = s.taskCount || 0;
+    const forumCount = s.forumCount || 0;
+    const quizCount = s.quizCount || 0;
+    const readingCount = s.readingCount || 0;
+    const sikap = Math.min(taskCount * 25 + forumCount * 20, 100);
+    const keterampilan = Math.min(quizCount * 30 + readingCount * 10, 100);
+    const total = (kehadiran * wAtt/tw) + (uh * wUH/tw) + (uts * wUts/tw) + (uas * wUas/tw) + (sikap * wSk/tw) + (keterampilan * wKr/tw);
+    const finalScore = Math.round(total * 10) / 10;
+    const grade = finalScore >= 85 ? "A" : finalScore >= 75 ? "B+" : finalScore >= 65 ? "B" : finalScore >= 55 ? "C+" : finalScore >= 45 ? "C" : finalScore >= 35 ? "D" : "E";
+    
+    reportSheet.getRange(rowNum, 1, 1, headers.length).setValues([[
+      s.studentId, s.nis, s.nama, s.absen, s.kelas, pertemuanCount, avgPerPertemuan, kehadiran, uh, uts, uas, sikap, keterampilan, finalScore, grade
+    ]]);
+    rowNum++;
+  });
+  reportSheet.autoResizeColumns(1, headers.length);
+  return { status: "ok", message: "Laporan Akumulasi Nilai Rapor berhasil digenerate!", sheetName: "Akumulasi Nilai Rapor", totalSiswa: rowNum - 2, weights: { attendanceWeight: wAtt, ulanganHarianWeight: wUH, utsWeight: wUts, uasWeight: wUas, attitudeWeight: wSk, skillWeight: wKr, totalWeight: tw } };
+}
+
+function getManualScores_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Nilai Manual");
+  const result = {};
+  if (!sheet || sheet.getLastRow() <= 1) return result;
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const sid = String(data[i][0] || "").trim();
+    const kategori = String(data[i][1] || "").toLowerCase().trim();
+    const skor = parseInt(data[i][2]) || 0;
+    if (!sid || !kategori) continue;
+    if (!result[sid]) result[sid] = {};
+    result[sid][kategori] = skor;
+  }
+  return result;
+}
+
+function setManualScore(data) {
+  const studentId = String(data.studentId || "").trim();
+  const kategori = String(data.kategori || "").toLowerCase().trim();
+  if (!studentId || !kategori) return { status: "error", message: "studentId dan kategori wajib diisi." };
+  const skor = Math.max(0, Math.min(100, parseInt(data.skor) || 0));
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = "Nilai Manual";
+  let sheet = ss.getSheetByName(sheetName);
+  const headers = ["Student ID", "Kategori", "Skor"];
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+  } else if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
+  }
+  const values = sheet.getLastRow() > 1 ? sheet.getDataRange().getValues() : [];
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0] || "").trim() === studentId && String(values[i][1] || "").toLowerCase().trim() === kategori) {
+      sheet.getRange(i + 1, 3).setValue(skor);
+      return { status: "ok", message: "Nilai " + kategori + " " + studentId + " diperbarui.", skor: skor };
+    }
+  }
+  sheet.appendRow([studentId, kategori, skor]);
+  return { status: "ok", message: "Nilai " + kategori + " " + studentId + " tersimpan.", skor: skor };
+}
+
+function response(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function getStudentRoster() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const usersSheet = ss.getSheetByName("Users");
+  const roster = [];
+  const users = [];
+  if (usersSheet && usersSheet.getLastRow() > 1) {
+    const data = usersSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      users.push({
+        studentId: String(data[i][0] || "").trim(), nis: String(data[i][1] || "").trim(), nama: String(data[i][2] || "").trim(),
+        email: String(data[i][3] || "").trim(), absen: String(data[i][4] || "").trim(), kelas: String(data[i][5] || "").trim()
+      });
+    }
+  }
+  
+  const reportSheet = ss.getSheetByName("Akumulasi Nilai Rapor");
+  const reportData = {};
+  if (reportSheet && reportSheet.getLastRow() > 1) {
+    const data = reportSheet.getDataRange().getValues();
+    const headers = data[0];
+    const idxSid = headers.indexOf("Student ID");
+    const idxPertemuan = headers.indexOf("Jumlah Pertemuan");
+    const idxAvg = headers.indexOf("Rata Aktivitas/Pertemuan");
+    const idxKehadiran = headers.indexOf("Kehadiran (skala 100)");
+    const idxUH = headers.indexOf("Rata-rata UH");
+    const idxUTS = headers.indexOf("Skor UTS");
+    const idxUAS = headers.indexOf("Skor UAS");
+    const idxSikap = headers.indexOf("Skor Sikap");
+    const idxKeterampilan = headers.indexOf("Skor Keterampilan");
+    const idxNilai = headers.indexOf("Nilai Akhir");
+    const idxGrade = headers.indexOf("Grade");
+    
+    for (let i = 1; i < data.length; i++) {
+      const sid = String(data[i][idxSid] || "").trim();
+      if (!sid) continue;
+      reportData[sid] = {
+        pertemuan: parseInt(data[i][idxPertemuan]) || 0, avgAktivitas: parseInt(data[i][idxAvg]) || 0, kehadiran: parseInt(data[i][idxKehadiran]) || 0,
+        uh: parseInt(data[i][idxUH]) || 0, uts: parseInt(data[i][idxUTS]) || 0, uas: parseInt(data[i][idxUAS]) || 0,
+        sikap: parseInt(data[i][idxSikap]) || 0, keterampilan: parseInt(data[i][idxKeterampilan]) || 0,
+        nilaiAkhir: parseFloat(data[i][idxNilai]) || 0, grade: String(data[i][idxGrade] || "N/A").trim()
+      };
+    }
+  }
+  
+  const actCounts = {};
+  const allSheets = ss.getSheets();
+  allSheets.forEach(sheet => {
+    const name = sheet.getName();
+    if (!name.includes(" - Aktivitas") || sheet.getLastRow() <= 1) return;
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const sid = String(data[i][7] || "").trim();
+      if (!sid) continue;
+      actCounts[sid] = (actCounts[sid] || 0) + 1;
+    }
+  });
+  
+  users.forEach(u => {
+    const report = reportData[u.studentId] || {};
+    const totalActivities = actCounts[u.studentId] || 0;
+    const nilaiAkhir = report.nilaiAkhir || 0;
+    let statusAktivitas = "Belum Ada Aktivitas";
+    let emoji = "📭";
+    if (totalActivities >= 25) { statusAktivitas = "Sangat Aktif"; emoji = "🔥"; }
+    else if (totalActivities >= 15) { statusAktivitas = "Konsisten"; emoji = "✅"; }
+    else if (totalActivities >= 8) { statusAktivitas = "Aktif"; emoji = "📘"; }
+    else if (totalActivities >= 3) { statusAktivitas = "Kurang Konsisten"; emoji = "⚠️"; }
+    else if (totalActivities > 0) { statusAktivitas = "Minim"; emoji = "🟡"; }
+    
+    roster.push({
+      studentId: u.studentId, nama: u.nama, nis: u.nis, absen: u.absen, kelas: u.kelas,
+      totalActivities: totalActivities, statusAktivitas: statusAktivitas, emoji: emoji,
+      logAktivitas: totalActivities + " aktivitas", nilaiAkhir: nilaiAkhir, grade: report.grade || "N/A",
+      kehadiran: report.kehadiran || 0, uh: report.uh || 0, uts: report.uts || 0, uas: report.uas || 0,
+      sikap: report.sikap || 0, keterampilan: report.keterampilan || 0
+    });
+  });
+  
+  roster.sort((a, b) => b.nilaiAkhir - a.nilaiAkhir);
+  return { status: "ok", roster: roster, total: roster.length };
+}
+
+function getUsersSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Users");
+  const headers = ["StudentID", "NIS", "Nama", "Email", "Absen", "Kelas", "RegisteredAt", "LastLogin"];
+  if (!sheet) {
+    sheet = ss.insertSheet("Users");
+    setupHeader(sheet, headers);
+    return sheet;
+  }
+  const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 1)).getValues()[0];
+  if (currentHeaders[1] !== "NIS") {
+    sheet.insertColumnsAfter(1, 1);
+    sheet.insertColumnsAfter(4, 2);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  }
+  return sheet;
+}
+
+function registerUser(data) {
+  const sheet = getUsersSheet_();
+  const nama = (data.nama || "").trim();
+  const email = (data.email || "").trim().toLowerCase();
+  const nis = (data.nis || "").trim();
+  const absen = (data.absen || "").trim();
+  const kelas = (data.kelas || "").trim();
+  if (!nis) return { status: "error", message: "NIS wajib diisi" };
+  if (!nama || nama.length < 3) return { status: "error", message: "Nama minimal 3 karakter" };
+  if (!email || !email.includes("@")) return { status: "error", message: "Email tidak valid" };
+  if (!absen) return { status: "error", message: "Nomor absen wajib diisi" };
+  if (!kelas) return { status: "error", message: "Kelas wajib diisi" };
+  
+  const existing = sheet.getDataRange().getValues();
+  for (let i = 1; i < existing.length; i++) {
+    const rowNis = String(existing[i][1] || "").trim();
+    const rowEmail = String(existing[i][3] || "").trim().toLowerCase();
+    if (rowNis === nis || rowEmail === email) {
+      return { status: "exists", message: "NIS atau email sudah terdaftar. Silakan login." };
+    }
+  }
+  
+  const studentId = "STD-" + new Date().getTime().toString().slice(-8);
+  const now = Utilities.formatDate(new Date(), "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
+  sheet.appendRow([studentId, nis, nama, email, absen, kelas, now, now]);
+  return { status: "success", message: "Registrasi berhasil!", studentId: studentId, nama: nama, email: email, nis: nis, absen: absen, kelas: kelas };
+}
+
+function loginUser(data) {
+  const sheet = getUsersSheet_();
+  if (sheet.getLastRow() <= 1) return { status: "error", message: "Belum ada user terdaftar. Silakan register dulu." };
+  const nis = (data.nis || "").trim();
+  const email = (data.email || "").trim().toLowerCase();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const rowNis = String(rows[i][1] || "").trim();
+    const rowEmail = String(rows[i][3] || "").trim().toLowerCase();
+    if (rowNis === nis && rowEmail === email) {
+      const now = Utilities.formatDate(new Date(), "Asia/Jakarta", "dd/MM/yyyy HH:mm:ss");
+      sheet.getRange(i + 1, 8).setValue(now);
+      return { status: "success", message: "Login berhasil!", studentId: rows[i][0], nis: rows[i][1], nama: rows[i][2], email: rows[i][3], absen: rows[i][4], kelas: rows[i][5] };
+    }
+  }
+  return { status: "error", message: "NIS atau email salah" };
+}
+
+function verifyUser(studentId) {
+  const sheet = getUsersSheet_();
+  if (sheet.getLastRow() <= 1) return { status: "error", message: "User tidak ditemukan" };
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim() === studentId) {
+      return { status: "success", studentId: rows[i][0], nis: rows[i][1], nama: rows[i][2], email: rows[i][3], absen: rows[i][4], kelas: rows[i][5] };
+    }
+  }
+  return { status: "error", message: "Student ID tidak valid" };
+}
+
+function logActivity(params) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("Aktivitas");
+  if (!sheet) {
+    sheet = ss.insertSheet("Aktivitas");
+    sheet.appendRow(["Timestamp", "Date", "StudentID", "Nama", "NIS", "Absen", "Kelas", "Tipe", "Deskripsi", "Sheet", "kdMateri"]);
+    sheet.getRange("B2:B").setNumberFormat("yyyy-mm-dd");
+    sheet.setFrozenRows(1);
+  } else if (sheet.getLastColumn() < 11) {
+    // Migrasi: tambah kolom kdMateri jika belum ada
+    sheet.getRange(1, 11, 1, 1).setValue("kdMateri");
+  }
+  const timestamp = params.timestamp || new Date().toISOString();
+  const date = params.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  sheet.appendRow([timestamp, date, params.studentId || "", params.name || "", params.nis || "", params.absen || "", params.kelas || "", params.activityType || "", params.description || "", params.sheet || "", params.kdMateri || ""]);
+  return { success: true, message: "Activity logged", date: date };
+}
+
+function getActivityHistory(params) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("Aktivitas");
+  const studentId = params.studentId;
+  const kdMateri = params.kdMateri || "";
+  const days = parseInt(params.days || 28);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - days);
+  
+  const dateMap = {};
+  
+  function collectRows_(target, studentIdx, dateIdx, kdMateriIdx) {
+    if (!target || target.getLastRow() <= 1) return;
+    const data = target.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (studentId && String(data[i][studentIdx] || "").trim() !== studentId) continue;
+      if (kdMateri && kdMateriIdx >= 0 && String(data[i][kdMateriIdx] || "").trim() !== kdMateri) continue;
+      const rowDate = data[i][dateIdx];
+      let rowDateObj;
+      if (rowDate instanceof Date) rowDateObj = rowDate;
+      else if (typeof rowDate === "string") rowDateObj = new Date(rowDate);
+      else continue;
+      if (isNaN(rowDateObj.getTime()) || rowDateObj < startDate || rowDateObj > today) continue;
+      const dateStr = Utilities.formatDate(rowDateObj, Session.getScriptTimeZone(), "yyyy-MM-dd");
+      dateMap[dateStr] = (dateMap[dateStr] || 0) + 1;
+    }
+  }
+  
+  // Sheet aktivitas global (Date di kolom B, StudentID di kolom C, kdMateri di kolom K)
+  if (sheet) collectRows_(sheet, 2, 1, 10);
+  
+  // Sheet kuis tunggal "pertemuan-kuis" (Date di kolom B, Student ID di kolom H)
+  const quizSheet = ss.getSheetByName(QUIZ_SHEET_NAME);
+  if (quizSheet) collectRows_(quizSheet, 7, 1, -1);
+  
+  const history = Object.keys(dateMap).map(date => ({ date: date, count: dateMap[date] }));
+  return { success: true, history: history };
+}
