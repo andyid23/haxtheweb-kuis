@@ -1,0 +1,115 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial: Konsol Dosen &amp; Kriteria Aktivitas - Quiz Dashboard Lite</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #202124; line-height: 1.55; }
+    body { max-width: 960px; margin: auto; padding: 2rem 1rem; }
+    h1, h2 { color: #6750a4; }
+    pre { overflow-x: auto; padding: 1rem; background: #f3f4f6; border-radius: .5rem; }
+    code { font-family: ui-monospace, monospace; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .note { padding: 1rem; border-left: 4px solid #6750a4; background: #f4f0ff; border-radius: 0 .5rem .5rem 0; }
+    .warn { padding: 1rem; border-left: 4px solid #b45309; background: #fef3c7; border-radius: 0 .5rem .5rem 0; }
+    li { margin: .45rem 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #d1d5db; padding: .5rem .75rem; text-align: left; }
+    th { background: #f3f4f6; }
+  </style>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+</head>
+<body>
+  <h1>Tutorial: Konsol Dosen, Generate Rapor, dan Cara Mengedit Kriteria Aktivitas</h1>
+
+  <h2>1. Konsol Dosen + Generate Laporan Rapor</h2>
+  <ol>
+    <li>Buka halaman dashboard yang memakai <code>&lt;quiz-dashboard&gt;</code>.</li>
+    <li>Ubah atribut elemen menjadi <code>view-mode="lecturer"</code> (di HAX: select <em>Mode Tampilan â†’ Mode Dosen (Console)</em>).</li>
+    <li>Masuk ke tab <strong>ðŸ“Š Nilai</strong> â€” sekarang menampilkan <strong>Console Dosen</strong>.</li>
+  </ol>
+  <h3>Yang bisa dilakukan</h3>
+  <ul>
+    <li><strong>Bobot rapor (6 input)</strong>: Kehadiran, Ulangan Harian, UTS, UAS, Sikap, Keterampilan. Nilai tersimpan otomatis di <code>localStorage</code> (key <code>a3-report-weights</code>) dan dikirim saat generate.</li>
+    <li><strong>UTS / UAS Manual</strong>: isi angka lalu tekan Enter/tab pada kolom siswa â€” tersimpan ke sheet <code>Nilai Manual</code> (kolom: Student ID, Kategori, Skor). Nilai manual <strong>menimpa</strong> skor tertinggi dari kuis.</li>
+    <li><strong>Generate Laporan Rapor</strong>: menghitung semua siswa dan menulis sheet <code>Akumulasi Nilai Rapor</code> (Nilai Akhir + Grade A/B+/B/C+/C/D/E), lalu roster di layar ikut ter-refresh.</li>
+    <li><strong>Muat Ulang Roster</strong>: membaca ulang Users + Akumulasi Nilai Rapor + aktivitas per siswa.</li>
+  </ul>
+
+  <h2>2. Cara Mengubah Kriteria "Checklist Aktivitas Harian"</h2>
+  <p>Kriteria dicentang oleh komponen <code>&lt;attendance-tracker&gt;</code> berdasarkan aktivitas hari ini (timezone WIB, reset tiap tengah malam).</p>
+  <h3>Lokasi kode</h3>
+  <ul>
+    <li>File: <code>custom/src/quiz-dashboard/lib/attendance-system.js</code></li>
+    <li>Fungsi: <code>_getTodayStats()</code> (Â±baris 265) â€” berisi ambang batas &amp; perhitungan.</li>
+  </ul>
+  <p>Kriteria saat ini (5 atau 6 poin):</p>
+  <table>
+    <tr><th>Kriteria</th><th>Ambang</th><th>Disimpan sebagai (tipe log)</th></tr>
+    <tr><td>ðŸ“– Membaca Materi</td><td>â‰¥ 3 aktivitas</td><td><code>reading</code></td></tr>
+    <tr><td>ðŸ“ Mengerjakan Kuis</td><td>â‰¥ 1</td><td><code>quiz</code></td></tr>
+    <tr><td>ðŸ“¤ Mengumpulkan Tugas</td><td>â‰¥ 1</td><td><code>assignment</code></td></tr>
+    <tr><td>â¬‡ï¸ Download Materi</td><td>â‰¥ 1</td><td><code>download</code></td></tr>
+    <tr><td>ðŸ’¬ Mengirim Komentar Forum</td><td>â‰¥ 1 (hanya jika <code>forum-api-url</code> diisi)</td><td><code>discussion</code></td></tr>
+    <tr><td>âœ… Total Aktivitas</td><td>â‰¥ 8</td><td>semua tipe</td></tr>
+  </table>
+  <p>Contoh mengubah ambang kuis dari 1 menjadi 2:</p>
+  <pre><code>// attendance-system.js, di _getTodayStats():
+// cari baris yang membandingkan counts.quiz, misalnya:
+if (counts.quiz &lt; 1) allDone = false;
+// ubah 1 menjadi 2:
+if (counts.quiz &lt; 2) allDone = false;</code></pre>
+  <p>Jumlah kriteria harus konsisten dengan <code>totalCriteria</code> di fungsi yang sama (5 tanpa forum, 6 dengan forum) â€” baris inilah yang menentukan persentase 4/5 = 80%.</p>
+  <h3>Batasan server (jangan diubah sembarangan)</h3>
+  <ul>
+    <li><code>lib/code.gs</code> â†’ <code>saveAttendance()</code>: maksimal <strong>15Ã— aktivitas reading per hari</strong> dan total <strong>50Ã— per hari</strong> per siswa (anti-spam).</li>
+    <li><code>lib/code-forum-tugas.gs</code> â†’ <code>getForumActivityHistory()</code>: sumber poin komentar forum untuk heatmap.</li>
+  </ul>
+
+  <h2>3. Kuis di Halaman Lain Tetap Mencentang "Mengerjakan Kuis"</h2>
+  <ul>
+    <li>Saat kuis selesai, <code>explode-quiz</code> menulis log lokal <code>quiz</code> ke <code>localStorage</code> (key <code>a3_attendance_logs</code>) via helper <code>pushLocalLog()</code>, lalu memancarkan event <code>a3-activity-logged</code>.</li>
+    <li>Halaman dashboard yang <strong>sedang terbuka</strong> ter-refresh otomatis lewat event tersebut.</li>
+    <li>Tab/window lain pada <strong>asal yang sama</strong> (mis. halaman kuis &amp; dashboard satu site) ter-refresh lewat event <code>storage</code> browser â€” kuis di halaman terpisah otomatis mencentang kriteria tanpa reload manual.</li>
+    <li>Setelah halaman dimuat ulang, data tetap terbaca dari localStorage; data server (sheet) tetap menjadi sumber akhir.</li>
+  </ul>
+
+  <h2>4. Heatmap Aktivitas (2 Kolom)</h2>
+  <ul>
+    <li>Komponen <code>&lt;engagement-score&gt;</code> kini menampilkan heatmap 1 bulan dengan <strong>grid 2 kolom</strong>: kiri heatmap (sel lebih besar), kanan ringkasan Total Aktivitas / Hari Aktif / Indeks Konsistensi + keterangan + legenda.</li>
+    <li>Di layar sempit (&lt;768px) otomatis menjadi 1 kolom; di HP kecil sel mengecil agar tetap muat.</li>
+    <li>Sumber: <code>getActivityHistory</code> (sheet Aktivitas + pertemuan-kuis) dan <code>getForumActivityHistory</code> bila <code>forum-api-url</code> diisi.</li>
+  </ul>
+
+  <h2>5. Setelah Mengubah Kode</h2>
+  <ol>
+    <li>Build: <code>cd custom &amp;&amp; npm run build</code>.</li>
+    <li>Kalau hanya mengubah <code>code.gs</code>: tempel ulang ke Apps Script lalu buat <strong>New version</strong> pada deployment (â‹® â†’ Manage deployments â†’ Edit â†’ New version).</li>
+    <li>Kalau mengubah komponen: muat ulang halaman dengan cache clear (Ctrl+F5).</li>
+  </ol>
+</body>
+</html>

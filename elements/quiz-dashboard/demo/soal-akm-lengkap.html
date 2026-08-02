@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: Soal AKM Lengkap (PG, PG Kompleks, Menjodohkan, Isian Singkat)</title>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <!-- <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; background: #fafafa; }
+    h1 { color: #6750a4; font-size: 22px; }
+    h2 { color: #333; font-size: 16px; margin-top: 32px; border-bottom: 2px solid #6750a4; padding-bottom: 6px; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+    .info code { background: #e3d9fc; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    .section { background: white; border-radius: 12px; padding: 20px; margin: 16px 0; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 6px; }
+    .badge-mc { background: #dbeafe; color: #1e40af; }
+    .badge-pgk { background: #fef3c7; color: #92400e; }
+    .badge-match { background: #d1fae5; color: #065f46; }
+    .badge-fill { background: #ede9fe; color: #5b21b6; }
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+    th { background: #f3f0fa; padding: 8px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; }
+    .kw { color: #cba6f7; } .str { color: #a6e3a1; } .num { color: #fab387; } .cm { color: #6c7086; }
+  </style> -->
+
+  <style>
+   :root, html, body {
+      margin: var(--ddd-spacing-0);
+      padding: var(--ddd-spacing-0);
+    }
+    #demo {
+      margin: var(--ddd-spacing-2);
+    }
+
+     explode-quiz {
+      margin: var(--ddd-spacing-2);
+      border: var(--ddd-border-md);
+      border-radius: var(--ddd-radius-lg);
+    }
+    explode-quiz:hover {
+      box-shadow: var(--ddd-boxShadow-sm);
+      color: var(--ddd-primary-8);
+    }
+    #example {
+      --quiz-dashboard-lite-font-size: var(--ddd-font-size-l);
+      background-color: var(--ddd-accent-5);
+      color: var(--ddd-primary-1);
+    }
+    .info { background: #a27cfa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 14px; margin-bottom: 20px; font-size: 13px; line-height: 1.6; }
+
+  </style>
+
+</head>
+<body>
+  <h1>📝 Demo: Soal AKM Lengkap</h1>
+  <div class="info">
+    <strong>4 Tipe Soal AKM:</strong><br>
+    <span class="badge badge-mc">PG</span> Pilihan Ganda biasa (1 jawaban benar) + <strong>PG Kompleks</strong> (multi-correct via <code>correctAnswers: [0,2]</code>)<br>
+    <span class="badge badge-pgk">PGK</span> Pilihan Ganda Kompleks — pernyataan Benar/Salah per baris (<code>type: "pgk"</code>)<br>
+    <span class="badge badge-match">MENJODOHKAN</span> Pasangkan item kiri ke kanan (<code>type: "matching"</code>)<br>
+    <span class="badge badge-fill">ISIAN SINGKAT</span> Ketik jawaban teks (<code>type: "shortAnswer"</code>)<br><br>
+    <strong>Fiturbaru:</strong> <code>image: "https://..."</code> untuk gambar soal &bull; <code>shuffle-choices</code> untuk acak jawaban
+  </div>
+
+<div id="demo">
+
+
+  <!-- ==================== CONTOH 1: PG Biasa ==================== -->
+  <h2><span class="badge badge-mc">PG</span> Soal 1: Pilihan Ganda Biasa</h2>
+  <div class="section">
+    <explode-quiz data-accent="4" data-primary="11"
+      id="quiz-pg"
+      sheet-name="AKM PG"
+      quiz-category="formatif"
+      shuffle-choices
+      editable="true"
+      questions='[
+        {
+          "question": "Apa kepanjangan dari HAX?",
+          "choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"],
+          "correctIndex": 1
+        },
+        {
+          "question": "Lit Element digunakan untuk?",
+          "image": "https://www.pngall.com/wp-content/uploads/13/JavaScript-PNG-Image.png",
+          "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"],
+          "correctIndex": 1
+        },
+        {
+          "question": "Planet terdekat dengan Matahari?",
+          "choices": ["Venus", "Bumi", "Mars", "Merkurius"],
+          "correctIndex": 3
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  </div>
+
+  <!-- ==================== CONTOH 2: PG Kompleks (Multi-Correct) ==================== -->
+  <h2><span class="badge badge-mc">PG KOMPLEKS</span> Soal 2: Pilihan Ganda Kompleks (Multi-Correct)</h2>
+  <div class="section">
+    <p style="font-size:13px;color:#555;margin-bottom:8px;">Centang <strong>lebih dari 1</strong> jawaban benar. Gunakan <code>correctAnswers: [0, 2]</code> (array, bukan <code>correctIndex</code>).</p>
+    <explode-quiz
+      id="quiz-pgk-multi"
+      sheet-name="AKM PG Kompleks"
+      quiz-category="formatif"
+      editable="true"
+      questions='[
+        {
+          "question": "Manakah yang merupakan framework CSS?",
+          "choices": ["React", "Tailwind CSS", "Vue.js", "Bootstrap"],
+          "correctAnswers": [1, 3]
+        },
+        {
+          "question": "Bahasa pemrograman yang berjalan di browser:",
+          "choices": ["Python", "JavaScript", "Java", "PHP"],
+          "correctAnswers": [1]
+        },
+        {
+          "question": "Yang termasuk Web Component API:",
+          "choices": ["Shadow DOM", "Canvas", "Custom Elements", "WebGL"],
+          "correctAnswers": [0, 2]
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- ==================== CONTOH 3: PG Kompleks Benar/Salah ==================== -->
+  <h2><span class="badge badge-pgk">PGK</span> Soal 3: Pilihan Ganda Kompleks (Benar / Salah)</h2>
+  <div class="section">
+    <p style="font-size:13px;color:#555;margin-bottom:8px;">Setiap pernyataan dipilih <strong>Benar</strong> atau <strong>Salah</strong>. Semua harus benar untuk dapat 1 poin.</p>
+    <explode-quiz
+      id="quiz-pgk"
+      sheet-name="AKM PGK Benar Salah"
+      quiz-category="formatif"
+      editable="true"
+      questions='[
+        {
+          "question": "Tentukan apakah pernyataan berikut Benar atau Salah:",
+          "type": "pgk",
+          "statements": [
+            {"text": "Energi biomassa memanfaatkan bahan dari limbah pertanian.", "answer": true},
+            {"text": "Pengembangan biomassa meningkatkan emisi karbon global.", "answer": false},
+            {"text": "JavaScript hanya bisa berjalan di server.", "answer": false}
+          ]
+        },
+        {
+          "question": "Pernyataan tentang Web Components:",
+          "type": "pgk",
+          "statements": [
+            {"text": "Shadow DOM mengisolasi DOM komponen.", "answer": true},
+            {"text": "Custom Elements memerlukan jQuery.", "answer": false},
+            {"text": "Web Components didukung semua browser modern.", "answer": true}
+          ]
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- ==================== CONTOH 4: Menjodohkan ==================== -->
+  <h2><span class="badge badge-match">MENJODOHKAN</span> Soal 4: Menjodohkan</h2>
+  <div class="section">
+    <p style="font-size:13px;color:#555;margin-bottom:8px;">Pilih pasangan yang tepat untuk setiap item kiri. <code>correctPairs: {"0":1, "1":0}</code> artinya Item Kiri 0 → Item Kanan B.</p>
+    <explode-quiz
+      id="quiz-match"
+      sheet-name="AKM Menjodohkan"
+      quiz-category="formatif"
+      editable="true"
+      questions='[
+        {
+          "question": "Jodohkan istilah dengan definisinya:",
+          "type": "matching",
+          "leftItems": ["HTML", "CSS", "JavaScript"],
+          "rightItems": ["Styling & Layout", "Struktur & Markup", "Interaktivitas & Logika"],
+          "correctPairs": {"0":1, "1":0, "2":2}
+        },
+        {
+          "question": "Pasangkan framework dengan bahasanya:",
+          "type": "matching",
+          "leftItems": ["React", "Vue.js", "Angular", "Svelte"],
+          "rightItems": ["TypeScript/JavaScript", "JavaScript", "JavaScript", "JavaScript"],
+          "correctPairs": {"0":0, "1":1, "2":0, "3":2}
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- ==================== CONTOH 5: Isian Singkat ==================== -->
+  <h2><span class="badge badge-fill">ISIAN SINGKAT</span> Soal 5: Isian Singkat</h2>
+  <div class="section">
+    <p style="font-size:13px;color:#555;margin-bottom:8px;">Ketik jawaban. Cek case-insensitive, <code>includes</code> match. <code>acceptedAnswers: ["biomassa", "sekam"]</code>.</p>
+    <explode-quiz
+      id="quiz-fill"
+      sheet-name="AKM Isian Singkat"
+      quiz-category="formatif"
+      editable="true"
+      questions='[
+        {
+          "question": "Sebutkan salah satu contoh bahan sisa limbah pertanian penunjang biomassa!",
+          "type": "shortAnswer",
+          "acceptedAnswers": ["biomassa", "sekam padi", "sekam", "limbah pertanian", "jerami"]
+        },
+        {
+          "question": "Apa kepanjangan dari HTML?",
+          "type": "shortAnswer",
+          "acceptedAnswers": ["hypertext markup language", "hyper text markup language"]
+        },
+        {
+          "question": "Bahasa pemrograman apa yang digunakan untuk styling web?",
+          "type": "shortAnswer",
+          "acceptedAnswers": ["css", "cascading style sheets"]
+        }
+      ]'>
+    </explode-quiz>
+  </div>
+
+  <!-- ==================== KUNCI JAWABAN ==================== -->
+  <h2>📋 Kunci Jawaban & Format Soal</h2>
+  <div class="section">
+    <table>
+      <thead>
+        <tr><th>No</th><th>Tipe</th><th>Format JSON</th><th>Scoring</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><span class="badge badge-mc">PG</span></td>
+          <td><code>{"correctIndex": 1}</code></td>
+          <td>1 poin jika benar</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><span class="badge badge-mc">PG KOMPLEKS</span></td>
+          <td><code>{"correctAnswers": [1, 3]}</code></td>
+          <td>1 poin jika SEMUA dipilih benar</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><span class="badge badge-pgk">PGK</span></td>
+          <td><code>{"type":"pgk", "statements":[{"text":"...","answer":true}]}</code></td>
+          <td>1 poin jika SEMUA pernyataan benar</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><span class="badge badge-match">MENJODOHKAN</span></td>
+          <td><code>{"type":"matching", "leftItems":[...], "rightItems":[...], "correctPairs":{"0":1}}</code></td>
+          <td>1 poin jika SEMUA pasangan benar</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><span class="badge badge-fill">ISIAN SINGKAT</span></td>
+          <td><code>{"type":"shortAnswer", "acceptedAnswers":["kata1","kata2"]}</code></td>
+          <td>1 poin jika teks includes salah satu jawaban</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ==================== CONTOH EDITOR ==================== -->
+  <h2>🛠️ Cara Edit di HAXcms Editor</h2>
+  <div id="example">
+    <p style="font-size:13px;color:#555;">Klik tombol <strong>"Edit Soal Kuis"</strong> di quiz. Di editor:</p>
+    <ul style="font-size:13px;color:#555;line-height:1.8;">
+      <li><strong>Type dropdown</strong> — pilih: Pilihan Ganda / PG Kompleks / Menjodohkan / Isian Singkat</li>
+      <li><strong>URL gambar</strong> — input URL gambar (opsional, muncul di bawah soal)</li>
+      <li><strong>PG Kompleks</strong> — centang checkbox <code>Benar</code> di多项 pilihan (lebih dari 1 = mode multi)</li>
+      <li><strong>Menjodohkan</strong> — isi item kiri + kanan, lalu JSON kunci: <code>{"0":1,"1":0}</code></li>
+      <li><strong>Isian Singkat</strong> — ketik jawaban diterima, pisahkan koma</li>
+      <li><strong>PGK (Benar/Salah)</strong> — isi JSON array: <code>[{"text":"...","answer":true}]</code></li>
+    </ul>
+    <pre><span class="cm">// Contoh JSON soal lengkap (paste di atribut questions)</span>
+[
+  { <span class="str">"question"</span>: "Apa itu HTML?", <span class="str">"image"</span>: "https://...", <span class="str">"correctIndex"</span>: <span class="num">0</span>,
+    <span class="str">"choices"</span>: [<span class="str">"Markup Language"</span>, <span class="str">"Programming"</span>, <span class="str">"Database"</span>, <span class="str">"OS"</span>] },
+  { <span class="str">"question"</span>: "Multi-correct:", <span class="str">"correctAnswers"</span>: [<span class="num">0</span>, <span class="num">2</span>],
+    <span class="str">"choices"</span>: [<span class="str">"A"</span>, <span class="str">"B"</span>, <span class="str">"C"</span>, <span class="str">"D"</span>] },
+  { <span class="str">"question"</span>: "Benar/Salah:", <span class="str">"type"</span>: <span class="str">"pgk"</span>,
+    <span class="str">"statements"</span>: [{<span class="str">"text"</span>: <span class="str">"..."</span>, <span class="str">"answer"</span>: <span class="kw">true</span>}] },
+  { <span class="str">"question"</span>: "Menjodohkan:", <span class="str">"type"</span>: <span class="str">"matching"</span>,
+    <span class="str">"leftItems"</span>: [<span class="str">"A"</span>], <span class="str">"rightItems"</span>: [<span class="str">"B"</span>],
+    <span class="str">"correctPairs"</span>: {<span class="str">"0"</span>: <span class="num">0</span>} },
+  { <span class="str">"question"</span>: "Isian:", <span class="str">"type"</span>: <span class="str">"shortAnswer"</span>,
+    <span class="str">"acceptedAnswers"</span>: [<span class="str">"jawaban1"</span>, <span class="str">"jawaban2"</span>] }
+]</pre>
+  </div>
+
+  <script type="module">
+    document.querySelectorAll('explode-quiz').forEach(quiz => {
+      window.addEventListener('quiz-user-login', (e) => {
+        quiz.studentId = e.detail.studentId;
+        quiz.studentName = e.detail.nama;
+        quiz.studentNis = e.detail.nis;
+        quiz.studentAbsen = e.detail.absen;
+        quiz.studentKelas = e.detail.kelas;
+      });
+    });
+  </script>
+</body>
+</html>

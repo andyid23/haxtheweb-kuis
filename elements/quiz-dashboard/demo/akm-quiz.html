@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Soal AKM Mandiri</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --bg-body: #f4f6f9;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 { text-align: center; color: #111; margin-bottom: 30px; }
+        
+        /* UI Stimulus Box */
+        .stimulus-box {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .stimulus-box h2 { margin-top: 0; font-size: 1.3rem; color: var(--primary); }
+        .stimulus-box p { line-height: 1.6; font-size: 1rem; text-align: justify; }
+
+        /* UI Card Soal */
+        .card-soal {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .no-soal { font-weight: bold; color: #555; margin-bottom: 10px; display: block; }
+        .teks-soal { font-size: 1.05rem; margin-top: 0; margin-bottom: 15px; font-weight: 600; }
+        
+        /* Elemen Input */
+        .opsi-label { display: block; margin: 10px 0; cursor: pointer; font-size: 0.95rem; }
+        .opsi-label input { margin-right: 10px; }
+        
+        /* UI Tabel PG Kompleks */
+        .table-pgk { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .table-pgk th, .table-pgk td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        .table-pgk th { background: #f1f3f5; }
+        .table-pgk td input { cursor: pointer; width: 18px; height: 18px; }
+
+        /* UI Menjodohkan */
+        .row-jodoh { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; max-width: 500px; }
+        select, input[type="text"], textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .row-jodoh select { width: 220px; }
+        textarea { resize: vertical; }
+
+        /* UI Tombol & Hasil */
+        .btn-container { text-align: center; margin: 40px 0 20px 0; }
+        .btn-submit {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #218838; }
+        
+        .hasil-box {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            color: #155724;
+            text-align: center;
+        }
+        .hasil-box h3 { margin-top: 0; font-size: 1.5rem; }
+        .skor-angka { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lembar Kerja AKM Mandiri</h1>
+
+    <!-- BAGIAN STIMULUS (Satu Stimulus untuk Semua Soal) -->
+    <div class="stimulus-box">
+        <h2>STIMULUS: Ketahanan Energi Indonesia Berbasis Biomassa</h2>
+        <p>Indonesia menargetkan bauran energi terbarukan mencapai 23% pada tahun depan. Salah satu pilar utamanya adalah pengembangan energi biomassa yang memanfaatkan limbah pertanian seperti sekam padi dan cangkang sawit. Potensi biomassa Indonesia diperkirakan mencapai 32,6 gigawatt (GW). Selain ramah lingkungan karena menekan emisi karbon hingga 70%, pemanfaatan biomassa juga membuka lapangan kerja baru di sektor pedesaan sekaligus mengurangi ketergantungan pada batu bara.</p>
+    </div>
+
+    <form id="formAkm" onsubmit="hitungSkorAKM(event)">
+        
+        <!-- 1. SOAL PILIHAN GANDA (PG) -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 1: Pilihan Ganda</span>
+            <p class="teks-soal">Berapakah estimasi total potensi energi biomassa yang dimiliki oleh Indonesia berdasarkan teks?</p>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="A" required> A. 23%</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="B"> B. 70%</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="C"> C. 32,6 Gigawatt (GW)</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="D"> D. 100%</label>
+        </div>
+
+        <!-- 2. SOAL PILIHAN GANDA KOMPLEKS (PGK) -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 2: Pilihan Ganda Kompleks (Benar / Salah)</span>
+            <p class="teks-soal">Tentukan apakah pernyataan berikut Benar atau Salah sesuai dengan isi teks di atas!</p>
+            <table class="table-pgk">
+                <thead>
+                    <tr>
+                        <th>Pernyataan</th>
+                        <th style="text-align: center; width: 80px;">Benar</th>
+                        <th style="text-align: center; width: 80px;">Salah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Energi biomassa memanfaatkan bahan dari limbah pertanian seperti sekam padi.</td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_1" value="Benar" required></td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_1" value="Salah"></td>
+                    </tr>
+                    <tr>
+                        <td>Pengembangan biomassa diprediksi akan meningkatkan emisi karbon secara global.</td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_2" value="Benar" required></td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_2" value="Salah"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. SOAL MENJODOHKAN -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 3: Menjodohkan</span>
+            <p class="teks-soal">Jodohkanlah data persentase di sebelah kiri dengan indikator dampaknya yang sesuai di sebelah kanan!</p>
+            
+            <div class="row-jodoh">
+                <span>1. Target Bauran Energi (23%)</span>
+                <select id="q_jodoh_1" required>
+                    <option value="">-- Pilih Dampak/Indikator --</option>
+                    <option value="X">Tingkat Penurunan Emisi Karbon</option>
+                    <option value="Y">Target Capaian Tahun Depan</option>
+                </select>
+            </div>
+            <div class="row-jodoh">
+                <span>2. Reduksi Karbon (70%)</span>
+                <select id="q_jodoh_2" required>
+                    <option value="">-- Pilih Dampak/Indikator --</option>
+                    <option value="X">Tingkat Penurunan Emisi Karbon</option>
+                    <option value="Y">Target Capaian Tahun Depan</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 4. SOAL ISIAN SINGKAT -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 4: Isian Singkat</span>
+            <p class="teks-soal">Sebutkan salah satu contoh bahan sisa limbah pertanian penunjang biomassa yang ditulis di dalam teks!</p>
+            <input type="text" id="q_isian" placeholder="Ketik satu kata/frasa jawaban..." required>
+        </div>
+
+        <!-- 5. SOAL URAIAN -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 5: Uraian Analitis</span>
+            <p class="teks-soal">Jelaskan mengapa pemanfaatan energi terbarukan biomassa dinilai mampu menguntungkan masyarakat pedesaan secara ekonomi?</p>
+            <textarea id="q_uraian" rows="4" placeholder="Tuliskan argumen analisis Anda (minimal 15 karakter)..." required></textarea>
+        </div>
+
+        <!-- TOMBOL JALANKAN KOREKSI -->
+        <div class="btn-container">
+            <button type="submit" class="btn-submit">Kunci & Koreksi Jawaban</button>
+        </div>
+    </form>
+
+    <!-- UI DISPLAY PANEL HASIL AKHIR -->
+    <div id="panelHasil" class="hasil-box">
+        <h3>🎉 Hasil Evaluasi Otomatis (Client-Side)</h3>
+        <p>Anda telah menyelesaikan paket soal AKM. Nilai pencapaian kalkulasi Anda:</p>
+        <div class="skor-angka" id="skorNilai">0</div>
+        <p><small>*Evaluasi esai dinilai otomatis berdasarkan analisis deteksi argumen teks kontekstual minimum.</small></p>
+    </div>
+</div>
+
+<script>
+    // LOGIKA KOREKSI JAWABAN (VANILLA JAVASCRIPT)
+    function hitungSkorAKM(event) {
+        event.preventDefault(); // Mencegah reload halaman saat submit
+
+        let poinBenar = 0;
+        const totalSoal = 5; // Total 5 jenis soal utama
+
+        // Kunci Jawaban Hardcoded di Frontend (Skenario Tanpa Database)
+        const KUNCI = {
+            pg: "C",
+            pgk_1: "Benar",
+            pgk_2: "Salah",
+            jodoh_1: "Y",
+            jodoh_2: "X",
+            isian: ["sekam padi", "cangkang sawit", "sekam", "sawit"]
+        };
+
+        // 1. Periksa Pilihan Ganda
+        const jawabanPg = document.querySelector('input[name="q_pg"]:checked').value;
+
+     if (jawabanPg === KUNCI.pg) poinBenar++;// 2. Periksa Pilihan Ganda Kompleks (Harus benar kedua baris untuk dapat 1 poin)const jawabanPgk1 = document.querySelector('input[name="q_pgk_1"]:checked').value;const jawabanPgk2 = document.querySelector('input[name="q_pgk_2"]:checked').value;if (jawabanPgk1 === KUNCI.pgk_1 && jawabanPgk2 === KUNCI.pgk_2) {poinBenar++;}// 3. Periksa Menjodohkan (Harus benar semua pasang untuk dapat 1 poin)const jawabanJodoh1 = document.getElementById('q_jodoh_1').value;const jawabanJodoh2 = document.getElementById('q_jodoh_2').value;if (jawabanJodoh1 === KUNCI.jodoh_1 && jawabanJodoh2 === KUNCI.jodoh_2) {poinBenar++;}// 4. Periksa Isian Singkat (.trim() hapus spasi samping, .toLowerCase() samakan kapitalisasi)const jawabanIsian = document.getElementById('q_isian').value.trim().toLowerCase();const isianBenar = KUNCI.isian.some(kunciLokal => jawabanIsian.includes(kunciLokal));if (isianBenar) poinBenar++;// 5. Periksa Uraian (Deteksi cerdas berbasis pemenuhan panjang karakter minimal & kata esensial)const jawabanUraian = document.getElementById('q_uraian').value.trim();if (jawabanUraian.length >= 15 && (jawabanUraian.toLowerCase().includes('kerja') || jawabanUraian.toLowerCase().includes('ekonomi') || jawabanUraian.toLowerCase().includes('tani'))) {poinBenar++;}// Konversi poin menjadi Nilai Skala 0-100const nilaiAkhir = Math.round((poinBenar / totalSoal) * 100);// Tampilkan Hasil ke Elemen UIdocument.getElementById('skorNilai').innerText = nilaiAkhir;const panelHasil = document.getElementById('panelHasil');panelHasil.style.display = "block";// Scroll otomatis ke panel hasil agar siswa langsung melihat skorpanelHasil.scrollIntoView({ behavior: 'smooth' });}
+     
+     Berikut adalah template Single-File (HTML + CSS + JavaScript Vanilla) yang menggabungkan Stimulus dan 5 Tipe Soal AKM sekaligus dalam satu halaman [I].
+Desain UI dibuat bersih, responsif, dan menggunakan pendekatan komponen vanilla (tanpa library luar) agar Anda bisa langsung membukanya di browser atau menyalinnya ke editor HAXcms [I, I].
+## Kode Lengkap (akm-quiz.html)
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Soal AKM Mandiri</title>
+    <style>
+        :root {
+            --primary: #007bff;
+            --success: #28a745;
+            --bg-body: #f4f6f9;
+            --text-color: #333;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+        h1 { text-align: center; color: #111; margin-bottom: 30px; }
+        
+        /* UI Stimulus Box */
+        .stimulus-box {
+            background: #f8f9fa;
+            border-left: 5px solid var(--primary);
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .stimulus-box h2 { margin-top: 0; font-size: 1.3rem; color: var(--primary); }
+        .stimulus-box p { line-height: 1.6; font-size: 1rem; text-align: justify; }
+
+        /* UI Card Soal */
+        .card-soal {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .no-soal { font-weight: bold; color: #555; margin-bottom: 10px; display: block; }
+        .teks-soal { font-size: 1.05rem; margin-top: 0; margin-bottom: 15px; font-weight: 600; }
+        
+        /* Elemen Input */
+        .opsi-label { display: block; margin: 10px 0; cursor: pointer; font-size: 0.95rem; }
+        .opsi-label input { margin-right: 10px; }
+        
+        /* UI Tabel PG Kompleks */
+        .table-pgk { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .table-pgk th, .table-pgk td { padding: 12px; border: 1px solid #dee2e6; text-align: left; }
+        .table-pgk th { background: #f1f3f5; }
+        .table-pgk td input { cursor: pointer; width: 18px; height: 18px; }
+
+        /* UI Menjodohkan */
+        .row-jodoh { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; max-width: 500px; }
+        select, input[type="text"], textarea {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .row-jodoh select { width: 220px; }
+        textarea { resize: vertical; }
+
+        /* UI Tombol & Hasil */
+        .btn-container { text-align: center; margin: 40px 0 20px 0; }
+        .btn-submit {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 14px 35px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-submit:hover { background: #218838; }
+        
+        .hasil-box {
+            display: none;
+            margin-top: 30px;
+            padding: 25px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            color: #155724;
+            text-align: center;
+        }
+        .hasil-box h3 { margin-top: 0; font-size: 1.5rem; }
+        .skor-angka { font-size: 3rem; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lembar Kerja AKM Mandiri</h1>
+
+    <!-- BAGIAN STIMULUS (Satu Stimulus untuk Semua Soal) -->
+    <div class="stimulus-box">
+        <h2>STIMULUS: Ketahanan Energi Indonesia Berbasis Biomassa</h2>
+        <p>Indonesia menargetkan bauran energi terbarukan mencapai 23% pada tahun depan. Salah satu pilar utamanya adalah pengembangan energi biomassa yang memanfaatkan limbah pertanian seperti sekam padi dan cangkang sawit. Potensi biomassa Indonesia diperkirakan mencapai 32,6 gigawatt (GW). Selain ramah lingkungan karena menekan emisi karbon hingga 70%, pemanfaatan biomassa juga membuka lapangan kerja baru di sektor pedesaan sekaligus mengurangi ketergantungan pada batu bara.</p>
+    </div>
+
+    <form id="formAkm" onsubmit="hitungSkorAKM(event)">
+        
+        <!-- 1. SOAL PILIHAN GANDA (PG) -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 1: Pilihan Ganda</span>
+            <p class="teks-soal">Berapakah estimasi total potensi energi biomassa yang dimiliki oleh Indonesia berdasarkan teks?</p>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="A" required> A. 23%</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="B"> B. 70%</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="C"> C. 32,6 Gigawatt (GW)</label>
+            <label class="opsi-label"><input type="radio" name="q_pg" value="D"> D. 100%</label>
+        </div>
+
+        <!-- 2. SOAL PILIHAN GANDA KOMPLEKS (PGK) -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 2: Pilihan Ganda Kompleks (Benar / Salah)</span>
+            <p class="teks-soal">Tentukan apakah pernyataan berikut Benar atau Salah sesuai dengan isi teks di atas!</p>
+            <table class="table-pgk">
+                <thead>
+                    <tr>
+                        <th>Pernyataan</th>
+                        <th style="text-align: center; width: 80px;">Benar</th>
+                        <th style="text-align: center; width: 80px;">Salah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Energi biomassa memanfaatkan bahan dari limbah pertanian seperti sekam padi.</td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_1" value="Benar" required></td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_1" value="Salah"></td>
+                    </tr>
+                    <tr>
+                        <td>Pengembangan biomassa diprediksi akan meningkatkan emisi karbon secara global.</td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_2" value="Benar" required></td>
+                        <td style="text-align: center;"><input type="radio" name="q_pgk_2" value="Salah"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 3. SOAL MENJODOHKAN -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 3: Menjodohkan</span>
+            <p class="teks-soal">Jodohkanlah data persentase di sebelah kiri dengan indikator dampaknya yang sesuai di sebelah kanan!</p>
+            
+            <div class="row-jodoh">
+                <span>1. Target Bauran Energi (23%)</span>
+                <select id="q_jodoh_1" required>
+                    <option value="">-- Pilih Dampak/Indikator --</option>
+                    <option value="X">Tingkat Penurunan Emisi Karbon</option>
+                    <option value="Y">Target Capaian Tahun Depan</option>
+                </select>
+            </div>
+            <div class="row-jodoh">
+                <span>2. Reduksi Karbon (70%)</span>
+                <select id="q_jodoh_2" required>
+                    <option value="">-- Pilih Dampak/Indikator --</option>
+                    <option value="X">Tingkat Penurunan Emisi Karbon</option>
+                    <option value="Y">Target Capaian Tahun Depan</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 4. SOAL ISIAN SINGKAT -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 4: Isian Singkat</span>
+            <p class="teks-soal">Sebutkan salah satu contoh bahan sisa limbah pertanian penunjang biomassa yang ditulis di dalam teks!</p>
+            <input type="text" id="q_isian" placeholder="Ketik satu kata/frasa jawaban..." required>
+        </div>
+
+        <!-- 5. SOAL URAIAN -->
+        <div class="card-soal">
+            <span class="no-soal">Soal 5: Uraian Analitis</span>
+            <p class="teks-soal">Jelaskan mengapa pemanfaatan energi terbarukan biomassa dinilai mampu menguntungkan masyarakat pedesaan secara ekonomi?</p>
+            <textarea id="q_uraian" rows="4" placeholder="Tuliskan argumen analisis Anda (minimal 15 karakter)..." required></textarea>
+        </div>
+
+        <!-- TOMBOL JALANKAN KOREKSI -->
+        <div class="btn-container">
+            <button type="submit" class="btn-submit">Kunci & Koreksi Jawaban</button>
+        </div>
+    </form>
+
+    <!-- UI DISPLAY PANEL HASIL AKHIR -->
+    <div id="panelHasil" class="hasil-box">
+        <h3>🎉 Hasil Evaluasi Otomatis (Client-Side)</h3>
+        <p>Anda telah menyelesaikan paket soal AKM. Nilai pencapaian kalkulasi Anda:</p>
+        <div class="skor-angka" id="skorNilai">0</div>
+        <p><small>*Evaluasi esai dinilai otomatis berdasarkan analisis deteksi argumen teks kontekstual minimum.</small></p>
+    </div>
+</div>
+
+<script>
+    // LOGIKA KOREKSI JAWABAN (VANILLA JAVASCRIPT)
+    function hitungSkorAKM(event) {
+        event.preventDefault(); // Mencegah reload halaman saat submit
+
+        let poinBenar = 0;
+        const totalSoal = 5; // Total 5 jenis soal utama
+
+        // Kunci Jawaban Hardcoded di Frontend (Skenario Tanpa Database)
+        const KUNCI = {
+            pg: "C",
+            pgk_1: "Benar",
+            pgk_2: "Salah",
+            jodoh_1: "Y",
+            jodoh_2: "X",
+            isian: ["sekam padi", "cangkang sawit", "sekam", "sawit"]
+        };
+
+        // 1. Periksa Pilihan Ganda
+        const jawabanPg = document.querySelector('input[name="q_pg"]:checked').value;
+
+if (jawabanPg === KUNCI.pg) poinBenar++;
+// 2. Periksa Pilihan Ganda Kompleks (Harus benar kedua baris untuk dapat 1 poin)
+const jawabanPgk1 = document.querySelector('input[name="q_pgk_1"]:checked').value;
+const jawabanPgk2 = document.querySelector('input[name="q_pgk_2"]:checked').value;
+if (jawabanPgk1 === KUNCI.pgk_1 && jawabanPgk2 === KUNCI.pgk_2) {
+poinBenar++;
+}
+// 3. Periksa Menjodohkan (Harus benar semua pasang untuk dapat 1 poin)
+const jawabanJodoh1 = document.getElementById('q_jodoh_1').value;
+const jawabanJodoh2 = document.getElementById('q_jodoh_2').value;
+if (jawabanJodoh1 === KUNCI.jodoh_1 && jawabanJodoh2 === KUNCI.jodoh_2) {
+poinBenar++;
+}
+// 4. Periksa Isian Singkat (.trim() hapus spasi samping, .toLowerCase() samakan kapitalisasi)
+const jawabanIsian = document.getElementById('q_isian').value.trim().toLowerCase();
+const isianBenar = KUNCI.isian.some(kunciLokal => jawabanIsian.includes(kunciLokal));
+if (isianBenar) poinBenar++;
+// 5. Periksa Uraian (Deteksi cerdas berbasis pemenuhan panjang karakter minimal & kata esensial)
+const jawabanUraian = document.getElementById('q_uraian').value.trim();
+if (jawabanUraian.length >= 15 && (jawabanUraian.toLowerCase().includes('kerja') || jawabanUraian.toLowerCase().includes('ekonomi') || jawabanUraian.toLowerCase().includes('tani'))) {
+poinBenar++;
+}
+// Konversi poin menjadi Nilai Skala 0-100
+const nilaiAkhir = Math.round((poinBenar / totalSoal) * 100);
+// Tampilkan Hasil ke Elemen UI
+document.getElementById('skorNilai').innerText = nilaiAkhir;
+const panelHasil = document.getElementById('panelHasil');
+panelHasil.style.display = "block";
+// Scroll otomatis ke panel hasil agar siswa langsung melihat skor
+panelHasil.scrollIntoView({ behavior: 'smooth' });
+}
+
+
+### Cara Menggunakan File Ini:
+1. Salin seluruh kode di atas, buat file baru di komputer Anda dengan nama **`akm-quiz.html`**, lalu simpan.
+2. Klik dua kali file tersebut untuk langsung membukanya di browser apa pun (Chrome/Edge/Firefox). Anda bisa langsung mencoba mengisi dan menekan tombol koreksi.
+3. **Integrasi HAXcms**: Jika ingin ditaruh ke HAXcms tanpa membungkusnya menjadi Web Component penuh, Anda cukup menyalin blok tag `<!-- BAGIAN STIMULUS ... -->` sampai tag penutup `</form>` dan `<script>` ke dalam **HTML/Source Code View Editor** di halaman HAXcms Anda [I].
+
+Jika Anda ingin menyesuaikannya kembali, beri tahu saya:
+* Apakah Anda membutuhkan **fitur timer/waktu mundur** agar ujian otomatis terkunci saat waktu habis?
+* Atau ingin menambahkan **pemberitahuan visual warna hijau (Benar) dan merah (Salah)** pada masing-masing kartu soal setelah tombol koreksi diklik?
+
+

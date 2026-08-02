@@ -1,0 +1,130 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial Mode Dosen - Quiz Dashboard Lite</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #202124; line-height: 1.55; }
+    body { max-width: 960px; margin: auto; padding: 2rem 1rem; }
+    h1, h2 { color: #6750a4; }
+    pre { overflow-x: auto; padding: 1rem; background: #f3f4f6; border-radius: .5rem; }
+    code { font-family: ui-monospace, monospace; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    .note { padding: 1rem; border-left: 4px solid #6750a4; background: #f4f0ff; border-radius: 0 .5rem .5rem 0; }
+    .warn { padding: 1rem; border-left: 4px solid #b45309; background: #fef3c7; border-radius: 0 .5rem .5rem 0; }
+    li { margin: .45rem 0; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+    th, td { border: 1px solid #d1d5db; padding: .5rem .75rem; text-align: left; }
+    th { background: #f3f4f6; }
+  </style>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  </head>
+<body>
+  <h1>Tutorial Mode Dosen â€” Satu Sheet <code>pertemuan-kuis</code> untuk Semua Materi</h1>
+  <p>Mulai versi ini, <strong>semua hasil kuis dari semua pertemuan/ulangan/UTS/UAS</strong> disimpan ke satu sheet bernama <code>pertemuan-kuis</code>. Sheet lama (<code>X - Kuis</code>) tetap dibaca untuk kompatibilitas, tetapi penulisan baru hanya ke sheet tunggal ini.</p>
+
+  <h2>1. Deploy Apps Script Kuis (wajib)</h2>
+  <ol>
+    <li>Buka Google Spreadsheet yang dipakai aplikasi.</li>
+    <li>Buka <strong>Extensions â†’ Apps Script</strong>.</li>
+    <li>Tempel kode dari <code>lib/code.gs</code>, simpan, lalu deploy sebagai Web App: <strong>Execute as: Me</strong> dan akses <strong>Anyone</strong>.</li>
+    <li>Salin URL yang berakhiran <code>/exec</code> â†’ ini <code>apps-script-url</code>.</li>
+    <li>Setelah mengubah Apps Script, selalu buat <strong>New version</strong> pada deployment (tombol â‹® â†’ Manage deployments â†’ Edit â†’ New version).</li>
+  </ol>
+
+  <h2>2. Deploy Apps Script Forum &amp; Tugas (opsional, untuk kriteria ke-5)</h2>
+  <ol>
+    <li>Buat Apps Script terpisah (atau file <code>code-forum-tugas.gs</code> pada project yang sama) dan tempel kodenya.</li>
+    <li>Deploy sebagai Web App dengan pengaturan yang sama, salin URL <code>/exec</code> â†’ ini <code>forum-api-url</code>.</li>
+    <li>Aktifkan di dashboard dengan atribut <code>forum-api-url</code>. Tanpa URL ini, kriteria kehadiran tetap 4 (tanpa "Mengirim Komentar Forum").</li>
+  </ol>
+
+  <h2>3. Tulis materi kuis dengan tag (Kode Materi)</h2>
+  <p>Setiap elemen <code>&lt;explode-quiz&gt;</code> kini punya atribut <code>tag</code> yang menjadi <strong>Kode Materi</strong> saat disimpan. Isi dengan kode unik agar nilai dapat dipisah per materi (UH1, UTS, UAS, dst.):</p>
+  <pre><code>&lt;explode-quiz
+  apps-script-url="https://script.google.com/macros/s/DEPLOYMENT_ID/exec"
+  tag="UH-1"
+  sheet-name="Ulangan Harian 1"
+  questions='[{ "question": "...", "choices": ["A", "B", "C"], "correct": 1 }]'&gt;
+&lt;/explode-quiz&gt;</code></pre>
+  <p>Bila <code>tag</code> tidak diisi, Kode Materi otomatis memakai <code>sheet-name</code>.</p>
+  <div class="note"><strong>Upsert nilai terbaik:</strong> per kombinasi <em>siswa + Kode Materi</em>, hanya nilai tertinggi yang dipertahankan. Nilai yang lebih kecil/sama <strong>tidak</strong> menimpa nilai terbaik â€” hasil kuis ulang tidak merusak nilai terbaik siswa.</div>
+
+  <h2>4. Struktur sheet <code>pertemuan-kuis</code></h2>
+  <p>Sheet dibuat otomatis pada penyimpanan pertama dengan kolom:</p>
+  <table>
+    <tr><th>Kolom</th><th>Isi</th></tr>
+    <tr><td>A Timestamp</td><td>Waktu penyimpanan</td></tr>
+    <tr><td>B Date</td><td>Tanggal (YYYY-MM-DD, dipakai heatmap &amp; kehadiran harian)</td></tr>
+    <tr><td>C Kode Materi</td><td>Dari atribut <code>tag</code></td></tr>
+    <tr><td>D Nama</td><td>Nama siswa</td></tr>
+    <tr><td>E Skor (%)</td><td>Skor 0â€“100</td></tr>
+    <tr><td>F Total Soal</td><td>Jumlah soal</td></tr>
+    <tr><td>G Status</td><td>LULUS / BELUM LULUS</td></tr>
+    <tr><td>H Student ID</td><td>Kunci identitas siswa (dipakai upsert)</td></tr>
+    <tr><td>I NIS, J Absen, K Kelas</td><td>Data siswa</td></tr>
+    <tr><td>L Kategori Kuis</td><td>UH / UTS / UAS / Formatif (untuk laporan)</td></tr>
+  </table>
+
+  <h2>5. Aktifkan Mode Dosen</h2>
+  <p>Pasang dashboard dengan <code>view-mode="lecturer"</code>. Tab <strong>ðŸ“Š Daftar Skor</strong> berubah menjadi console dosen:</p>
+  <pre><code>&lt;quiz-dashboard
+  apps-script-url="https://script.google.com/macros/s/DEPLOYMENT_ID/exec"
+  forum-api-url="https://script.google.com/macros/s/FORUM_DEPLOYMENT_ID/exec"
+  view-mode="lecturer"&gt;
+&lt;/quiz-dashboard&gt;</code></pre>
+  <ul>
+    <li><strong>Generate Laporan</strong> â€” menjalankan <code>generateReport</code> di Apps Script: merekap nilai per kategori (UH, UTS, UAS) + rata-rata ke sheet laporan.</li>
+    <li><strong>Ringkasan</strong> â€” memuat <code>updateSummary</code> untuk statistik per kode materi.</li>
+  </ul>
+
+  <h2>6. Cara kerja kartu nilai (<code>.grade-card</code>)</h2>
+  <p>Kartu <strong>ðŸ“– Pencapaian Hasil Belajar</strong> di tab nilai menghitung Nilai Akhir dengan pembobotan rapor:</p>
+  <table>
+    <tr><th>Komponen</th><th>Bobot</th><th>Sumber</th></tr>
+    <tr><td>Kehadiran</td><td>12.5%</td><td>Rata-rata aktivitas per pertemuan (Aktivitas + pertemuan-kuis), dihitung ulang otomatis</td></tr>
+    <tr><td>Ulangan Harian</td><td>37.5%</td><td>Rata-rata skor kategori UH di <code>pertemuan-kuis</code> (nilai terbaik per kode materi)</td></tr>
+    <tr><td>UTS</td><td>25%</td><td>Skor tertinggi kategori UTS</td></tr>
+    <tr><td>UAS</td><td>25%</td><td>Skor tertinggi kategori UAS</td></tr>
+  </table>
+  <p>Nilai akhir = (Kehadiran Ã— 0.125) + (UH Ã— 0.375) + (UTS Ã— 0.25) + (UAS Ã— 0.25). Tabel juga menampilkan <strong>Sikap</strong> dan <strong>Keterampilan</strong> (jika tersedia di data), serta rincian skor per Kode Materi. Bila UTS/UAS belum diisi, komponen tersebut dihitung 0.</p>
+  <div class="warn"><strong>Perhatian:</strong> pastikan kategori pada <code>tag</code> konsisten (mis. semua UH memakai awalan <code>UH</code>), karena pengelompokan UH/UTS/UAS dalam laporan bergantung pada teks Kode Materi / Kategori Kuis.</div>
+
+  <h2>7. Heatmap &amp; kehadiran</h2>
+  <ul>
+    <li>Tab <strong>ðŸ“… Kehadiran &amp; Aktivitas</strong> menampilkan heatmap aktivitas 6 minggu (gaya GitHub) yang menggabungkan data <code>getActivityHistory</code> (Apps Script utama) dan <code>getForumActivityHistory</code> (Apps Script forum, lewat GET).</li>
+    <li>Kriteria kehadiran menjadi 5 bila <code>forum-api-url</code> terisi: membaca materi, mengerjakan kuis, diskusi forum, mengunduh bahan, dan <strong>mengirim komentar forum</strong> (diperiksa harian di sheet "Forum Log").</li>
+  </ul>
+
+  <h2>8. Build &amp; deployment situs</h2>
+  <ol>
+    <li>Ubah kode komponen di <code>custom/src/quiz-dashboard/</code>.</li>
+    <li>Bangun bundle: <code>cd custom &amp;&amp; npm run build</code>.</li>
+    <li>Halaman yang memakai komponen ini otomatis mendapat fitur baru (bundle <code>custom.es6.js</code>).</li>
+  </ol>
+</body>
+</html>

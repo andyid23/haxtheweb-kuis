@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: Ulangan Harian 1</title>
+  <script type="module" src="../quiz-dashboard.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  
+    <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  </head>
+<body>
+  <h1>ðŸ“ Ulangan Harian 2</h1>
+  <div class="info">
+    <strong>Properties yang dikirim:</strong><br>
+    <code>quiz-category="ulangan_harian"</code> &mdash; Masuk kalkulasi nilai akhir (bobot 3/8)<br>
+    <code>sheet-name="Ulangan Harian 2"</code> &mdash; Sheet terpisah per ulangan harian
+  </div>
+
+  <quiz-user-auth apps-script-url= <!-- STEP 1: Login -->
+  <div class="step">
+    <h2><span class="step-num">1</span> Login / Registrasi</h2>
+    <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+  </div>"></quiz-user-auth>
+
+  <explode-quiz
+    id="uh1"
+    sheet-name="Ulangan Harian 2"
+    quiz-category="ulangan_harian"
+    apps-script-url=" <!-- STEP 1: Login -->
+  <div class="step">
+    <h2><span class="step-num">1</span> Login / Registrasi</h2>
+    <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+  </div>"
+    editable="true"
+    questions='[
+      {"question": "Apa kepanjangan dari HAX?", "choices": ["Hyper-Active X", "Hybrid Authoring eXperience", "High Accuracy XML", "Hyper Access X"], "correct": 1},
+      {"question": "Lit Element digunakan untuk?", "choices": ["Database", "Komponen Web Custom", "Mobile App", "Operating System"], "correct": 1},
+      {"question": "Google Sheets API digunakan untuk?", "choices": ["Desain Grafis", "Manipulasi Data Spreadsheet", "Video Editing", "Music Production"], "correct": 1}
+    ]'>
+  </explode-quiz>
+
+  <script type="module">
+    const quiz = document.querySelector('#uh1');
+    const auth = document.querySelector('quiz-user-auth');
+
+    // Sinkronkan data user ke quiz
+    window.addEventListener('quiz-user-login', (e) => {
+      quiz.studentId = e.detail.studentId;
+      quiz.studentName = e.detail.nama;
+      quiz.studentNis = e.detail.nis;
+      quiz.studentAbsen = e.detail.absen;
+      quiz.studentKelas = e.detail.kelas;
+    });
+  </script>
+</body>
+</html>

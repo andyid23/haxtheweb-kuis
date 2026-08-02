@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: assignment-component — Tugas & Pengumpulan</title>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/assignment-component.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;assignment-component&gt;</h1>
+  <div class="info">
+    Kartu tugas: instruksi, unduh lampiran, dan kirim jawaban (upload/catatan).
+    Atribut: <code>apps-script-url</code>, <code>assignment-title</code>, <code>assignment-instruction</code>,
+    <code>sheet-name</code> (kd-materi diambil dari nama sheet), <code>forum-api-url</code> (opsional),
+    <code>hide-delete</code> (sembunyikan tombol hapus), data siswa dari sesi login.
+    Event: <code>discussion-saved</code>.
+  </div>
+
+  <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+
+  <assignment-component id="tugas"
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    assignment-title="Tugas 1: Ringkasan Materi Pertemuan 1"
+    assignment-instruction="Tulis ringkasan materi pertemuan 1 dengan bahasamu sendiri, lalu kirim melalui form di bawah."
+    sheet-name="Pertemuan 1"></assignment-component>
+</body>
+</html>

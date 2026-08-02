@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: activity-logger — Aktivitas Harian</title>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/attendance-system.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+    .event-log { background: #fafafa; border: 1px dashed #bbb; border-radius: 8px; padding: 12px; margin-top: 16px; font-family: monospace; font-size: 12px; min-height: 60px; }
+    .event-log .e { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;activity-logger&gt;</h1>
+  <div class="info">
+    Pill melayang yang menampilkan log aktivitas hari ini (baca materi, kuis, diskusi, unduh).
+    Atribut: <code>apps-script-url</code>, <code>forum-api-url</code>, <code>sheet-name</code>,
+    <code>student-id</code>/<code>student-nis</code>/<code>student-absen</code>/<code>student-kelas</code>
+    (diisi otomatis dari sesi <code>quiz-user-auth</code>). Event: <code>a3-activity-logged</code>.
+    Klik pill untuk membuka drawer log.
+  </div>
+
+  <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+
+  <activity-logger id="logger" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec" sheet-name="Pertemuan 1"></activity-logger>
+
+  <h3>Coba: kerjakan kuis singkat untuk memicu log aktivitas</h3>
+  <explode-quiz id="quiz" questions='[
+    {"q":"1 + 1 = ?","options":["1","2","3"],"correctIndex":1},
+    {"q":"Ibu kota Indonesia?","options":["Bandung","Jakarta","Surabaya"],"correctIndex":1}
+  ]'></explode-quiz>
+
+  <h3>Log Event (a3-activity-logged)</h3>
+  <div id="events" class="event-log"><em>Belum ada aktivitas…</em></div>
+
+  <script type="module">
+    const log = (msg) => {
+      const box = document.getElementById("events");
+      const line = document.createElement("div");
+      line.className = "e";
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      box.prepend(line);
+    };
+    window.addEventListener("a3-activity-logged", (e) => log(JSON.stringify(e.detail)));
+  </script>
+</body>
+</html>

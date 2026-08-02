@@ -1,0 +1,118 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo Quiz Dashboard - Mode Dosen</title>
+
+  <style>
+:root,html, body {
+  margin: var(--ddd-spacing-0);
+  padding: var(--ddd-spacing-0);
+}
+    #demo {
+      margin: var(--ddd-spacing-2);
+    }
+
+    </style>
+  <script type="module" src="../quiz-dashboard.js"></script>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  
+    <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  </head>
+<body>
+
+  <nav style="margin: 12px 0; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px;">
+    <a href="index.html">Home</a> |
+    <a href="quiz-user-auth.html">Login</a>
+    <a href="activity-logger.html">Activity</a>
+    <a href="attendance-tracker.html">Kehadiran</a>
+    <a href="engagement-score.html">Engagement</a>
+    <a href="transparent-gradebook.html">Nilai</a>
+    <a href="assignment-component.html">Tugas</a>
+    <a href="forum-component.html">Forum</a>
+    <a href="lecturer-console.html">Konsol Dosen</a>
+    <a href="question-generator.html">Generator Soal</a> |
+    <a href="ulangan-harian.html">UH 1</a>
+    <a href="ulangan-harian2.html">UH 2</a>
+    <a href="ulangan-harian3.html">UH 3</a>
+    <a href="ulangan-harian4.html">UH 4</a>
+    <a href="ulangan-harian-campuran.html">UH Campuran</a>
+    <a href="uts.html">UTS</a>
+    <a href="uas.html">UAS</a>
+    <a href="quiz-mode-ujian.html">Mode Ujian</a>
+    <a href="tugas-dan-forum.html">Tugas+Forum</a>
+    <a href="integrasi-aktifitas.html">Integrasi</a>
+    <a href="akm-quiz.html">AKM Quiz</a>
+    <a href="soal-akm-lengkap.html">Soal AKM</a>
+    <a href="v4-grading-images-matching.html">Grading v4</a>
+    <a href="v5.html">Versi 5</a> |
+    <a href="tutorial.html">Tutorial</a>
+    <a href="tutorial-materi.html">Materi</a>
+    <a href="tutorial-dosen-kriteria.html">Kriteria Dosen</a>
+    <a href="tutorial-mode-dosen.html">Mode Dosen</a>
+    <a href="tutorial-v3.html">v3</a>
+    <a href="tutorial-v4.html">v4</a>
+    <a href="tutorial-v5.html">v5</a>
+    <a href="tutor/tutor-contoh-akm-quiz.html">Tutor AKM</a>
+    <a href="tutor/tutor-soal-akm-lengkap.html">Tutor Soal</a>
+  </nav>
+
+  <h1 style="color: #6750a4;">ðŸŽ“ Demo: Mode Dosen (Lecturer)</h1>
+  <p style="color: #666;">Atribut <code>view-mode="lecturer"</code> mengaktifkan tombol âš™ï¸ untuk input nilai UTS/UAS, ubah bobot, dan generate laporan rapor.</p>
+
+  <quiz-dashboard
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    sheet-name="Pertemuan 1"
+    view-mode="lecturer">
+  </quiz-dashboard>
+</body>
+</html>

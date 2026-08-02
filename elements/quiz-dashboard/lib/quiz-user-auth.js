@@ -1,4 +1,4 @@
-// elements/quiz-dashboard-lite/lib/quiz-user-auth.js
+// elements/quiz-dashboard/lib/quiz-user-auth.js
 import { DDDSuper } from "@haxtheweb/d-d-d/d-d-d.js";
 import { LitElement, html, css } from "lit";
 import { I18NMixin } from "@haxtheweb/i18n-manager/lib/I18NMixin.js";

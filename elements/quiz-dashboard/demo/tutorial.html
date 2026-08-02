@@ -1,0 +1,345 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tutorial & Dokumentasi â€” Quiz Dashboard</title>
+  <style>
+    body { padding: 24px; max-width: 960px; margin: 0 auto; font-family: system-ui; background: #fafafa; color: #2d3748; }
+    h1 { color: #6750a4; font-size: 22px; border-bottom: 3px solid #6750a4; padding-bottom: 8px; }
+    h2 { color: #333; font-size: 17px; margin-top: 36px; border-left: 4px solid #6750a4; padding-left: 12px; }
+    h3 { color: #555; font-size: 14px; margin-top: 20px; }
+    .card { background: white; border-radius: 12px; padding: 20px; margin: 16px 0; border: 1px solid #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; margin-right: 4px; }
+    .b-new { background: #d1fae5; color: #065f46; }
+    .b-fix { background: #fef3c7; color: #92400e; }
+    .b-feat { background: #dbeafe; color: #1e40af; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 8px; font-size: 12px; overflow-x: auto; line-height: 1.5; margin: 10px 0; }
+    code { background: #f0f0f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 10px 0; }
+    th { background: #f3f0fa; padding: 8px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #eee; }
+    .file { font-family: monospace; color: #6750a4; font-weight: bold; }
+    .diff-add { background: #d1fae5; padding: 2px 4px; border-radius: 2px; }
+    .diff-del { background: #fee2e2; padding: 2px 4px; border-radius: 2px; text-decoration: line-through; }
+  </style>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  
+    <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  </head>
+<body>
+  <h1>ðŸ“š Tutorial & Dokumentasi Perubahan</h1>
+  <p style="color:#666;font-size:13px;">Quiz Dashboard â€” Perubahan terakhir: 25 Juli 2026</p>
+
+  <!-- ===== DAFTAR ISI ===== -->
+  <div class="card">
+    <h3>Daftar Isi</h3>
+    <ol style="font-size:13px;line-height:2;">
+      <li><a href="#reset-bobot">Reset Bobot Default (tw=8)</a></li>
+      <li><a href="#grade-dynamic">Grade Calculation Dynamic Weights</a></li>
+      <li><a href="#multi-correct">Multi-Correct Checkbox UI</a></li>
+      <li><a href="#question-types">4 Tipe Soal AKM + Campuran</a></li>
+      <li><a href="#image-url">Image URL di Soal & Editor</a></li>
+      <li><a href="#shuffle">Shuffle Pilihan Jawaban</a></li>
+      <li><a href="#roster">Summary Board Dosen â€” Real Roster</a></li>
+      <li><a href="#quiz-category">Quiz Category di explode-quiz</a></li>
+      <li><a href="#assignment-forum">Elemen Baru: &lt;assignment-forum&gt;</a></li>
+      <li><a href="#demo-files">Demo Files</a></li>
+    </ol>
+  </div>
+
+  <!-- ===== 1. RESET BOBOT ===== -->
+  <h2 id="reset-bobot"><span class="badge b-new">BARU</span> Reset Bobot Default</h2>
+  <div class="card">
+    <p>Tombol "ðŸ”„ Reset ke Default (1:3:2:2 = 8)" di mode dosen mengembalikan bobot ke standar.</p>
+    <h3>File: <span class="file">attendance-system.js</span></h3>
+    <p><strong>Ditambahkan:</strong> method <code>_resetWeights()</code> + tombol di lecturer panel.</p>
+    <pre>// attendance-system.js â€” _resetWeights()
+_resetWeights() {
+  const defaults = { ...DEFAULT_GRADES };
+  localStorage.setItem(GRADES_STORAGE_KEY, JSON.stringify(defaults));
+  this._gradesConfig = defaults;
+  window.dispatchEvent(new CustomEvent("a3-force-reload"));
+}</pre>
+    <p>Tombol di render:</p>
+    <pre>&lt;button class="toggle-btn" @click="${() =&gt; this._resetWeights()}"&gt;
+  ðŸ”„ Reset ke Default (1:3:2:2 = 8)
+&lt;/button&gt;</pre>
+    <h3>DEFAULT_GRADES (tidak berubah)</h3>
+    <pre>const DEFAULT_GRADES = {
+  attendanceWeight: 1,    // Kehadiran
+  ulanganHarianWeight: 3, // Ulangan Harian
+  utsWeight: 2,           // UTS
+  uasWeight: 2,           // UAS
+  totalWeight: 8,         // 1+3+2+2
+  uts: 0,
+  uas: 0
+};</pre>
+  </div>
+
+  <!-- ===== 2. GRADE DYNAMIC ===== -->
+  <h2 id="grade-dynamic"><span class="badge b-fix">FIX</span> Grade Calculation Dynamic</h2>
+  <div class="card">
+    <p><strong>Bug:</strong> <code>totalWeight</code> di localStorage tidak auto-update â†’ client pakai <code>tw=8</code> (default) walau bobot diubah.</p>
+    <h3>File: <span class="file">attendance-system.js</span></h3>
+    <p><strong>3 tempat di-fix:</strong></p>
+    <pre>// 1. _getFinalScore() â€” auto-calc tw, prefer server kehadiran
+_getFinalScore() {
+  const wA = this._gradesConfig.attendanceWeight || 1;
+  const wU = this._gradesConfig.ulanganHarianWeight || 3;
+  const wT = this._gradesConfig.utsWeight || 2;
+  const wS = this._gradesConfig.uasWeight || 2;
+  const tw = wA + wU + wT + wS; // â† auto-calc
+
+  const attScore = this._scores.kehadiran || this._getAttendanceScore().overall;
+  const uhScore = this._scores.ulanganHarian?.average || this._scores.ulanganHarian?.highest || 0;
+  // ...
+}</pre>
+    <pre>// 2. _updateGradesConfig() â€” auto-recalc totalWeight
+updated.totalWeight = (updated.attendanceWeight || 0) +
+  (updated.ulanganHarianWeight || 0) + (updated.utsWeight || 0) + (updated.uasWeight || 0);</pre>
+    <pre>// 3. render() â€” same auto-calc
+const tw = (this._gradesConfig.attendanceWeight || 1) +
+  (this._gradesConfig.ulanganHarianWeight || 3) +
+  (this._gradesConfig.utsWeight || 2) +
+  (this._gradesConfig.uasWeight || 2);</pre>
+    <h3>File: <span class="file">code.gs</span></h3>
+    <pre>// generateReport(weights) â€” dynamic weights dari client
+function generateReport(weights) {
+  const wAtt = (weights &amp;&amp; parseInt(weights.attendanceWeight)) || 1;
+  const wUH = (weights &amp;&amp; parseInt(weights.ulanganHarianWeight)) || 3;
+  const wUts = (weights &amp;&amp; parseInt(weights.utsWeight)) || 2;
+  const wUas = (weights &amp;&amp; parseInt(weights.uasWeight)) || 2;
+  const tw = wAtt + wUH + wUts + wUas;
+  // formula: (kehadiran * wAtt/tw) + (uh * wUH/tw) + ...
+}</pre>
+    <p><strong>Contoh:</strong> Kehadiran 50%, UH 50%, UTS 0%, UAS 0% â†’ set <code>attendanceWeight:1, ulanganHarianWeight:1, utsWeight:0, uasWeight:0</code> â†’ <code>tw=2</code> â†’ formula benar.</p>
+  </div>
+
+  <!-- ===== 3. MULTI-CORRECT ===== -->
+  <h2 id="multi-correct"><span class="badge b-feat">FITUR</span> Multi-Correct Checkbox UI</h2>
+  <div class="card">
+    <p>Soal dengan <code>correctAnswers: [0, 2]</code> (array) â†’ render checkbox-style buttons + tombol "Kirim Jawaban".</p>
+    <h3>File: <span class="file">explode-quiz.js</span></h3>
+    <pre>// _renderMC() â€” deteksi multi
+const isMulti = Array.isArray(q.correctAnswers);
+// render checkboxes + "Kirim Jawaban" button
+
+// _submitMultiAnswers() â€” score = 1 jika SEMUA benar
+_submitMultiAnswers() {
+  const correct = new Set(q.correctAnswers || []);
+  const selected = this._selectedAnswers;
+  const isCorrect = correct.size === selected.size &amp;&amp;
+    [...correct].every(c =&gt; selected.has(c));
+  if (isCorrect) this._score += 1;
+}</pre>
+    <pre>// Contoh soal multi-correct:
+{
+  "question": "Manakah framework CSS?",
+  "choices": ["React", "Tailwind CSS", "Vue.js", "Bootstrap"],
+  "correctAnswers": [1, 3]
+}</pre>
+  </div>
+
+  <!-- ===== 4. TIPE SOAL ===== -->
+  <h2 id="question-types"><span class="badge b-feat">FITUR</span> 4 Tipe Soal AKM + Campuran</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>Tipe</th><th>Property</th><th>Contoh JSON</th><th>Scoring</th></tr></thead>
+      <tbody>
+        <tr><td>PG</td><td><code>correctIndex: 0</code></td><td>1 jawaban benar</td><td>1 poin</td></tr>
+        <tr><td>PG Kompleks</td><td><code>correctAnswers: [0,2]</code></td><td>Multi-correct</td><td>1 poin</td></tr>
+        <tr><td>PGK Benar/Salah</td><td><code>type: "pgk"</code></td><td><code>statements: [{text, answer:true}]</code></td><td>1 poin</td></tr>
+        <tr><td>Menjodohkan</td><td><code>type: "matching"</code></td><td><code>leftItems, rightItems, correctPairs</code></td><td>1 poin</td></tr>
+        <tr><td>Isian Singkat</td><td><code>type: "shortAnswer"</code></td><td><code>acceptedAnswers: ["kata1"]</code></td><td>1 poin</td></tr>
+      </tbody>
+    </table>
+    <p><strong>Campuran dalam 1 kuis:</strong> Setiap soal = 1 poin. 10 soal campur = 10 poin max.</p>
+    <pre>// Contoh 10 soal campuran:
+questions='[
+  {"type":"mc", "question":"...", "choices":[...], "correctIndex":0},
+  {"type":"mc", "question":"...", "choices":[...], "correctAnswers":[1,3]},
+  {"type":"pgk", "question":"...", "statements":[{text:"...",answer:true}]},
+  {"type":"matching", "question":"...", "leftItems":[...], "rightItems":[...], "correctPairs":{"0":1}},
+  {"type":"shortAnswer", "question":"...", "acceptedAnswers":["jawaban1","jawaban2"]}
+]'</pre>
+  </div>
+
+  <!-- ===== 5. IMAGE URL ===== -->
+  <h2 id="image-url"><span class="badge b-feat">FITUR</span> Image URL di Soal & Editor</h2>
+  <div class="card">
+    <pre>// Tambahkan property "image" di JSON soal:
+{
+  "question": "Lit Element digunakan untuk?",
+  "image": "https://example.com/lit-element.png",
+  "choices": ["Database", "Komponen Web", "Mobile App", "OS"],
+  "correctIndex": 1
+}
+
+// Di editor: ada field "URL gambar (opsional)" di atas textarea soal</pre>
+  </div>
+
+  <!-- ===== 6. SHUFFLE ===== -->
+  <h2 id="shuffle"><span class="badge b-feat">FITUR</span> Shuffle Pilihan Jawaban</h2>
+  <div class="card">
+    <pre>&lt;explode-quiz shuffle-choices ...&gt;
+
+// Fisher-Yates shuffle, acak saat mulai kuis
+// originalIndex disimpan di _correctMap untuk scoring</pre>
+  </div>
+
+  <!-- ===== 7. ROSTER ===== -->
+  <h2 id="roster"><span class="badge b-feat">FITUR</span> Summary Board â€” Real Roster</h2>
+  <div class="card">
+    <p>Mode dosen menampilkan daftar siswa dari Google Sheets (bukan mock).</p>
+    <h3>File: <span class="file">code.gs</span> â€” <code>getStudentRoster()</code></h3>
+    <pre>// Baca: Users sheet + Akumulasi Nilai Rapor + Aktivitas sheets
+// Return: { roster: [{ nama, emoji, statusAktivitas, nilaiAkhir, ... }] }
+// Emoji: ðŸ”¥ Sangat Aktif(â‰¥25) âœ… Konsisten(â‰¥15) ðŸ“˜ Aktif(â‰¥8)
+//        âš ï¸ Kurang Konsisten(â‰¥3) ðŸŸ¡ Minim(>0) ðŸ“­ Belum Ada</pre>
+    <h3>File: <span class="file">attendance-system.js</span></h3>
+    <pre>_fetchRoster() {
+  const url = `${this.appsScriptUrl}?action=getStudentRoster`;
+  fetch(url).then(r =&gt; r.json()).then(data =&gt; {
+    if (data.status === "ok") this._roster = data.roster;
+  });
+}
+// Panggil di connectedCallback + setelah generateReport</pre>
+  </div>
+
+  <!-- ===== 8. QUIZ CATEGORY ===== -->
+  <h2 id="quiz-category"><span class="badge b-fix">FIX</span> Quiz Category di explode-quiz</h2>
+  <div class="card">
+    <pre>// explode-quiz sekarang punya property quizCategory:
+quizCategory: { type: String, attribute: "quiz-category" }
+// Default: "formatif"
+// HAX Properties: dropdown (formatif / ulangan_harian / uts / uas)
+// Terkirim ke Apps Script via params.quizCategory</pre>
+  </div>
+
+  <!-- ===== 9. ASSIGNMENT FORUM ===== -->
+  <h2 id="assignment-forum"><span class="badge b-new">BARU</span> Elemen &lt;assignment-forum&gt;</h2>
+  <div class="card">
+    <h3>File baru: <span class="file">lib/assignment-forum.js</span></h3>
+    <p>Lit component untuk tugas mandiri + forum diskusi. Adaptasi dari <code>demo/forum-dan-tugas.html</code>.</p>
+    <pre>&lt;assignment-forum
+  assignment-title="Judul Tugas"
+  assignment-instruction="Instruksi..."
+  forum-topik="Topik Forum"
+  apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+  sheet-name="Pertemuan 1"
+  student-id="STD-..."
+  student-name="Nama"&gt;
+&lt;/assignment-forum&gt;</pre>
+    <h3>Properties</h3>
+    <table>
+      <thead><tr><th>Property</th><th>Attribute</th><th>Default</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td>assignmentTitle</td><td>assignment-title</td><td>"Tugas Mandiri"</td><td>Judul tugas</td></tr>
+        <tr><td>assignmentInstruction</td><td>assignment-instruction</td><td>""</td><td>Instruksi tugas</td></tr>
+        <tr><td>forumTopic</td><td>forum-topik</td><td>"Forum Diskusi"</td><td>Judul forum</td></tr>
+        <tr><td>appsScriptUrl</td><td>apps-script-url</td><td>""</td><td>URL Apps Script</td></tr>
+        <tr><td>sheetName</td><td>sheet-name</td><td>"Pertemuan"</td><td>Nama sheet</td></tr>
+        <tr><td>studentId</td><td>student-id</td><td>""</td><td>ID siswa</td></tr>
+        <tr><td>studentName</td><td>student-name</td><td>""</td><td>Nama siswa</td></tr>
+      </tbody>
+    </table>
+    <h3>Events</h3>
+    <ul style="font-size:13px;line-height:1.8;">
+      <li><code>a3-activity-logged</code> â€” dispatch setelah kirim tugas/forum</li>
+      <li>Trigger ke <code>activity-logger</code> â†’ kirim ke Google Sheets</li>
+    </ul>
+    <h3>Syarat Kehadiran</h3>
+    <pre>// attendance-system.js â€” DEFAULT_THRESHOLDS:
+minWeeklyActivities: 10  // total aktivitas per minggu
+minAssignment: 1         // minimal 1 tugas mandiri
+minDiscussion: 1         // minimal 1 postingan forum
+minReading: 5            // minimal 5 baca materi
+minQuiz: 1               // minimal 1 kuis formatif</pre>
+  </div>
+
+  <!-- ===== 10. DEMO FILES ===== -->
+  <h2 id="demo-files"><span class="badge b-new">BARU</span> Demo Files</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>File</th><th>Deskripsi</th></tr></thead>
+      <tbody>
+        <tr><td class="file">demo/index.html</td><td>Dashboard mode dosen</td></tr>
+        <tr><td class="file">demo/ulangan-harian.html</td><td>Quiz ulangan harian (PG biasa)</td></tr>
+        <tr><td class="file">demo/ulangan-harian-campuran.html</td><td>10 soal campur AKM (PG/PGK/Menjodohkan/Isian)</td></tr>
+        <tr><td class="file">demo/uts.html</td><td>Quiz UTS</td></tr>
+        <tr><td class="file">demo/uas.html</td><td>Quiz UAS</td></tr>
+        <tr><td class="file">demo/soal-akm-lengkap.html</td><td>Semua tipe soal AKM + editor</td></tr>
+        <tr><td class="file">demo/tugas-dan-forum.html</td><td>Tugas mandiri & forum (syarat kehadiran)</td></tr>
+        <tr><td class="file">demo/tutorial.html</td><td>Tutorial & dokumentasi ini</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===== RINGKASAN PERUBAHAN ===== -->
+  <h2>ðŸ“‹ Ringkasan Semua Perubahan</h2>
+  <div class="card">
+    <table>
+      <thead><tr><th>File</th><th>Perubahan</th></tr></thead>
+      <tbody>
+        <tr><td class="file">code.gs</td><td>getStudentRoster(), generateReport(dynamic weights), routing getStudentRoster</td></tr>
+        <tr><td class="file">attendance-system.js</td><td>_resetWeights(), auto-calc tw, prefer server kehadiran, real roster, _fetchRoster()</td></tr>
+        <tr><td class="file">explode-quiz.js</td><td>quizCategory prop, shuffleChoices, 5 tipe soal (mc/pgk/matching/shortAnswer), multi-correct checkbox, image URL, editor type+image+all-types</td></tr>
+        <tr><td class="file">assignment-forum.js</td><td><strong>BARU</strong> â€” Lit component tugas + forum</td></tr>
+        <tr><td class="file">demo/*.html</td><td>7 demo files (campuran, tugas-dan-forum, soal-akm-lengkap, tutorial)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="text-align:center;padding:30px;color:#aaa;font-size:12px;">
+    Quiz Dashboard â€” Documentation generated 25 Juli 2026
+  </div>
+</body>
+</html>

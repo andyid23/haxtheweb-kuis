@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: attendance-tracker — Kehadiran Harian</title>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/attendance-system.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;attendance-tracker&gt;</h1>
+  <div class="info">
+    Ring kehadiran harian dengan 4–5 kriteria: membaca materi, mengerjakan kuis, diskusi forum,
+    mengunduh bahan, dan (bila <code>forum-api-url</code> diisi) mengirim komentar forum.
+    Atribut: <code>apps-script-url</code>, <code>forum-api-url</code>, <code>sheet-name</code>,
+    data siswa dari sesi <code>quiz-user-auth</code>.
+  </div>
+
+  <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+
+  <attendance-tracker id="tracker"
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    forum-api-url="https://script.google.com/macros/s/AKfycbyWqGKSDIm1el5_fzK331QIDWGR-xvpm1dQmaObC_2D0lHbStxAPHIxYFNktbicy6-NwQ/exec"
+    sheet-name="Pertemuan 1"></attendance-tracker>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: question-generator — Generator Soal AKM</title>
+  <script type="module" src="../lib/question-generator.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+    .picker { margin: 12px 0; }
+    .picker select, .picker button { padding: 8px 12px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;question-generator&gt;</h1>
+  <div class="info">
+    Generator soal AKM dari template lokal (<code>LITERASI_BANK</code> / <code>NUMERASI_BANK</code>)
+    atau Bank Soal Google Sheets (<code>getBankSoal</code>). Hasil diterapkan ke kuis via
+    <code>quiz-selector</code> (default <code>#quiz</code>) lalu memicu
+    <code>questions-generated</code> dan <code>questions-changed</code>.
+    Atribut: <code>apps-script-url</code> (opsional untuk template lokal), <code>kategori</code>,
+    <code>quiz-selector</code>.
+  </div>
+
+  <div class="picker">
+    <label>Kategori: <select id="kategori">
+      <option value="campur" selected>Campuran (Literasi + Numerasi)</option>
+      <option value="literasi">Literasi</option>
+      <option value="numerasi">Numerasi</option>
+    </select></label>
+  </div>
+
+  <question-generator id="gen"
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    quiz-selector="#quiz"
+    kategori="campur"></question-generator>
+
+  <h3>Kuis target</h3>
+  <explode-quiz id="quiz"></explode-quiz>
+
+  <script type="module">
+    document.getElementById("kategori").addEventListener("change", (e) => {
+      document.getElementById("gen").setAttribute("kategori", e.target.value);
+    });
+  </script>
+</body>
+</html>

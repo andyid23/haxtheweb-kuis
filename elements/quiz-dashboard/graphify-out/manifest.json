@@ -1,0 +1,322 @@
+{
+  "lib/assignment-component.js": {
+    "mtime": 1785628908.6056786,
+    "ast_hash": "1585217049fccdcddab39f4aa81e08d9",
+    "semantic_hash": "1585217049fccdcddab39f4aa81e08d9"
+  },
+  "lib/assignment-forum.js": {
+    "mtime": 1785628593.2411468,
+    "ast_hash": "1509e3903042cbff0cd59509be974656",
+    "semantic_hash": "1509e3903042cbff0cd59509be974656"
+  },
+  "lib/attendance-system.js": {
+    "mtime": 1785627123.6231515,
+    "ast_hash": "d94c7371ea5e300072b54aff36c8906c",
+    "semantic_hash": "d94c7371ea5e300072b54aff36c8906c"
+  },
+  "lib/ddd-dark-mode.js": {
+    "mtime": 1785509241.675021,
+    "ast_hash": "5bd0cd6f0421ac10892c758c77e5d168",
+    "semantic_hash": "5bd0cd6f0421ac10892c758c77e5d168"
+  },
+  "lib/explode-quiz.js": {
+    "mtime": 1785629402.98052,
+    "ast_hash": "770d7683edf5f2c688dee1c4bf46d7f0",
+    "semantic_hash": "770d7683edf5f2c688dee1c4bf46d7f0"
+  },
+  "lib/forum-component.js": {
+    "mtime": 1785629425.707086,
+    "ast_hash": "b45f167a66fe785df28293a24198d151",
+    "semantic_hash": "b45f167a66fe785df28293a24198d151"
+  },
+  "lib/lecturer-console.js": {
+    "mtime": 1785579251.2146287,
+    "ast_hash": "55fe076768969d05edd2e31f4b33668f",
+    "semantic_hash": "55fe076768969d05edd2e31f4b33668f"
+  },
+  "lib/question-generator.js": {
+    "mtime": 1785627478.036933,
+    "ast_hash": "b47c26af276f1c823ad276a1b4e80228",
+    "semantic_hash": "b47c26af276f1c823ad276a1b4e80228"
+  },
+  "lib/quiz-dashboard.haxProperties.json": {
+    "mtime": 1785666409.710485,
+    "ast_hash": "b4fa82b53fa5019fd7250f6b137d2e56",
+    "semantic_hash": "b4fa82b53fa5019fd7250f6b137d2e56"
+  },
+  "lib/quiz-user-auth.js": {
+    "mtime": 1785670517.159938,
+    "ast_hash": "40d1f83a18dfe7b04fa7a56e3edfb920",
+    "semantic_hash": "40d1f83a18dfe7b04fa7a56e3edfb920"
+  },
+  "locales/quiz-dashboard.ar.haxProperties.json": {
+    "mtime": 1785663741.1509545,
+    "ast_hash": "0f8bd35830bd18870e18dbdf61906db8",
+    "semantic_hash": "0f8bd35830bd18870e18dbdf61906db8"
+  },
+  "locales/quiz-dashboard.ar.json": {
+    "mtime": 1785663741.1509545,
+    "ast_hash": "ee8b2a1e1dd95580a76388863244ca49",
+    "semantic_hash": "ee8b2a1e1dd95580a76388863244ca49"
+  },
+  "locales/quiz-dashboard.bn.haxProperties.json": {
+    "mtime": 1785663741.1589572,
+    "ast_hash": "afebea2f2374c9f432145bc31d6dd610",
+    "semantic_hash": "afebea2f2374c9f432145bc31d6dd610"
+  },
+  "locales/quiz-dashboard.bn.json": {
+    "mtime": 1785663741.1589572,
+    "ast_hash": "d581827bddca2dcb06428590f6378686",
+    "semantic_hash": "d581827bddca2dcb06428590f6378686"
+  },
+  "locales/quiz-dashboard.es.haxProperties.json": {
+    "mtime": 1785663741.1589572,
+    "ast_hash": "5fdf5a818b2b7152dba67256ccad4134",
+    "semantic_hash": "5fdf5a818b2b7152dba67256ccad4134"
+  },
+  "locales/quiz-dashboard.es.json": {
+    "mtime": 1785663741.1589572,
+    "ast_hash": "d67a8b20cdcd10af6fe40a6e00ddd3ea",
+    "semantic_hash": "d67a8b20cdcd10af6fe40a6e00ddd3ea"
+  },
+  "locales/quiz-dashboard.fr.haxProperties.json": {
+    "mtime": 1785663741.1669548,
+    "ast_hash": "5f1778cee546c4b67b9f0eb023ad30a3",
+    "semantic_hash": "5f1778cee546c4b67b9f0eb023ad30a3"
+  },
+  "locales/quiz-dashboard.fr.json": {
+    "mtime": 1785663741.1669548,
+    "ast_hash": "9e3f13422d283b730430b9bcb7681d39",
+    "semantic_hash": "9e3f13422d283b730430b9bcb7681d39"
+  },
+  "locales/quiz-dashboard.hi.haxProperties.json": {
+    "mtime": 1785663741.1669548,
+    "ast_hash": "046ad335f606829ec97c4d10e857e1a9",
+    "semantic_hash": "046ad335f606829ec97c4d10e857e1a9"
+  },
+  "locales/quiz-dashboard.hi.json": {
+    "mtime": 1785663741.1669548,
+    "ast_hash": "2088fac540f27dc84b4bb92996f5cedb",
+    "semantic_hash": "2088fac540f27dc84b4bb92996f5cedb"
+  },
+  "locales/quiz-dashboard.ja.haxProperties.json": {
+    "mtime": 1785663741.1749585,
+    "ast_hash": "03f0286eb1bef280a526fdfa4ffde8d0",
+    "semantic_hash": "03f0286eb1bef280a526fdfa4ffde8d0"
+  },
+  "locales/quiz-dashboard.ja.json": {
+    "mtime": 1785663741.1749585,
+    "ast_hash": "6c5289b581ff27183c5548858a1a69f3",
+    "semantic_hash": "6c5289b581ff27183c5548858a1a69f3"
+  },
+  "locales/quiz-dashboard.pt.haxProperties.json": {
+    "mtime": 1785663741.1749585,
+    "ast_hash": "5fdf5a818b2b7152dba67256ccad4134",
+    "semantic_hash": "5fdf5a818b2b7152dba67256ccad4134"
+  },
+  "locales/quiz-dashboard.pt.json": {
+    "mtime": 1785663741.1829588,
+    "ast_hash": "d67a8b20cdcd10af6fe40a6e00ddd3ea",
+    "semantic_hash": "d67a8b20cdcd10af6fe40a6e00ddd3ea"
+  },
+  "locales/quiz-dashboard.ru.haxProperties.json": {
+    "mtime": 1785663741.1829588,
+    "ast_hash": "19166274c383fcd57b9a8943008e5b21",
+    "semantic_hash": "19166274c383fcd57b9a8943008e5b21"
+  },
+  "locales/quiz-dashboard.ru.json": {
+    "mtime": 1785663741.1829588,
+    "ast_hash": "ab19884599af29668292ce7e86d39e1b",
+    "semantic_hash": "ab19884599af29668292ce7e86d39e1b"
+  },
+  "locales/quiz-dashboard.zh.haxProperties.json": {
+    "mtime": 1785663741.1829588,
+    "ast_hash": "62a9e8359e2bba06ff0498c47a7bca63",
+    "semantic_hash": "62a9e8359e2bba06ff0498c47a7bca63"
+  },
+  "locales/quiz-dashboard.zh.json": {
+    "mtime": 1785663741.190956,
+    "ast_hash": "d23e2432dbdcc83859fe0416d5cd7ce3",
+    "semantic_hash": "d23e2432dbdcc83859fe0416d5cd7ce3"
+  },
+  "package.json": {
+    "mtime": 1785666651.0108378,
+    "ast_hash": "88385c7e364d7b3916f0137406467fd5",
+    "semantic_hash": "88385c7e364d7b3916f0137406467fd5"
+  },
+  "quiz-dashboard-legacy.js": {
+    "mtime": 1785663741.2309637,
+    "ast_hash": "c49a810e661bac6c0bc98ecbca2353a5",
+    "semantic_hash": "c49a810e661bac6c0bc98ecbca2353a5"
+  },
+  "quiz-dashboard.js": {
+    "mtime": 1785665469.737069,
+    "ast_hash": "1329f537608c1d85c7e1eff9aeca036b",
+    "semantic_hash": "1329f537608c1d85c7e1eff9aeca036b"
+  },
+  "rollup.config.js": {
+    "mtime": 1785663741.2389562,
+    "ast_hash": "a7c1b16b35a221e2df28430c8e9168d3",
+    "semantic_hash": "a7c1b16b35a221e2df28430c8e9168d3"
+  },
+  "test/quiz-dashboard.test.js": {
+    "mtime": 1785663741.2389562,
+    "ast_hash": "1cadf71cccc1f1f7650c3d7c51f18740",
+    "semantic_hash": "1cadf71cccc1f1f7650c3d7c51f18740"
+  },
+  "web-dev-server.config.mjs": {
+    "mtime": 1785670522.1311443,
+    "ast_hash": "33380ceca524deca33657d78a8c52995",
+    "semantic_hash": "33380ceca524deca33657d78a8c52995"
+  },
+  ".github/workflows/main.yml": {
+    "mtime": 1785663741.1302,
+    "ast_hash": "3f8cd84746a43726433f4e257357d7ba",
+    "semantic_hash": "3f8cd84746a43726433f4e257357d7ba"
+  },
+  ".travis.yml": {
+    "mtime": 1785663741.1349387,
+    "ast_hash": "8924ef59a0ea958b51a5572e4145db14",
+    "semantic_hash": "8924ef59a0ea958b51a5572e4145db14"
+  },
+  "README.md": {
+    "mtime": 1785663741.2309637,
+    "ast_hash": "478caa812118ca78e84cc96db6dc79ea",
+    "semantic_hash": "478caa812118ca78e84cc96db6dc79ea"
+  },
+  "demo/akm-quiz.html": {
+    "mtime": 1784968840.2655165,
+    "ast_hash": "69348c109c282e99c7713b48bdd4c4ff",
+    "semantic_hash": "69348c109c282e99c7713b48bdd4c4ff"
+  },
+  "demo/index.html": {
+    "mtime": 1785670454.870162,
+    "ast_hash": "f4f0acacf9a11aad0e017ab1127b4f38",
+    "semantic_hash": "f4f0acacf9a11aad0e017ab1127b4f38"
+  },
+  "demo/integrasi-aktifitas.html": {
+    "mtime": 1785670454.8761723,
+    "ast_hash": "6022ee3f6fde2ad3aae9cae3040547d3",
+    "semantic_hash": "6022ee3f6fde2ad3aae9cae3040547d3"
+  },
+  "demo/quiz-mode-ujian.html": {
+    "mtime": 1785670454.8811576,
+    "ast_hash": "a836cb14b80060eeed8254735e7c1c4c",
+    "semantic_hash": "a836cb14b80060eeed8254735e7c1c4c"
+  },
+  "demo/soal-akm-lengkap.html": {
+    "mtime": 1785082056.0516336,
+    "ast_hash": "c3adb8ff11714576f516433c7b189a5e",
+    "semantic_hash": "c3adb8ff11714576f516433c7b189a5e"
+  },
+  "demo/tugas-dan-forum.html": {
+    "mtime": 1785670454.8881705,
+    "ast_hash": "8030014e5f006de17517848d7d9bdd09",
+    "semantic_hash": "8030014e5f006de17517848d7d9bdd09"
+  },
+  "demo/tutor/tutor-contoh-akm-quiz.html": {
+    "mtime": 1785509368.2441134,
+    "ast_hash": "d5c0ab6fcd080a96e2806672d8495d3d",
+    "semantic_hash": "d5c0ab6fcd080a96e2806672d8495d3d"
+  },
+  "demo/tutor/tutor-soal-akm-lengkap.html": {
+    "mtime": 1785670500.5433311,
+    "ast_hash": "8d7069418a38497e1376fff6645d2e66",
+    "semantic_hash": "8d7069418a38497e1376fff6645d2e66"
+  },
+  "demo/tutorial-dosen-kriteria.html": {
+    "mtime": 1785670493.247005,
+    "ast_hash": "ee29582ab863558cef9f538dd0b5fd38",
+    "semantic_hash": "ee29582ab863558cef9f538dd0b5fd38"
+  },
+  "demo/tutorial-materi.html": {
+    "mtime": 1785670493.2530146,
+    "ast_hash": "b1193607c4259498a67a751347a56873",
+    "semantic_hash": "b1193607c4259498a67a751347a56873"
+  },
+  "demo/tutorial-mode-dosen.html": {
+    "mtime": 1785670493.2610118,
+    "ast_hash": "d74653354891a242612f2609a67266a9",
+    "semantic_hash": "d74653354891a242612f2609a67266a9"
+  },
+  "demo/tutorial-v3.html": {
+    "mtime": 1785670468.5586164,
+    "ast_hash": "7f9b8cb073e1ea468a9a9ec7cc163185",
+    "semantic_hash": "7f9b8cb073e1ea468a9a9ec7cc163185"
+  },
+  "demo/tutorial-v4.html": {
+    "mtime": 1785670468.5636308,
+    "ast_hash": "738486fb61f4dcc40009b0f74001fc08",
+    "semantic_hash": "738486fb61f4dcc40009b0f74001fc08"
+  },
+  "demo/tutorial-v5.html": {
+    "mtime": 1785670468.5686245,
+    "ast_hash": "b984587165c8eebb79abb217bc2ca4fe",
+    "semantic_hash": "b984587165c8eebb79abb217bc2ca4fe"
+  },
+  "demo/tutorial.html": {
+    "mtime": 1785670468.5746238,
+    "ast_hash": "5dac62116060ab3f716e0ca0b6178af8",
+    "semantic_hash": "5dac62116060ab3f716e0ca0b6178af8"
+  },
+  "demo/uas.html": {
+    "mtime": 1785670454.9351802,
+    "ast_hash": "00e95522fea14aa98e6e3d304a5a3bda",
+    "semantic_hash": "00e95522fea14aa98e6e3d304a5a3bda"
+  },
+  "demo/ulangan-harian-campuran.html": {
+    "mtime": 1785581437.031057,
+    "ast_hash": "df2b7d6ea912f7bf62df1cedabb75378",
+    "semantic_hash": "df2b7d6ea912f7bf62df1cedabb75378"
+  },
+  "demo/ulangan-harian.html": {
+    "mtime": 1785670454.952175,
+    "ast_hash": "089ec4d93bc069b55235d267815167ca",
+    "semantic_hash": "089ec4d93bc069b55235d267815167ca"
+  },
+  "demo/ulangan-harian2.html": {
+    "mtime": 1785670454.980162,
+    "ast_hash": "33d71c175dcf2ece646038b1be411066",
+    "semantic_hash": "33d71c175dcf2ece646038b1be411066"
+  },
+  "demo/ulangan-harian3.html": {
+    "mtime": 1785670454.9851706,
+    "ast_hash": "8b7cc2442fe7f48548eb8749bed7a20d",
+    "semantic_hash": "8b7cc2442fe7f48548eb8749bed7a20d"
+  },
+  "demo/ulangan-harian4.html": {
+    "mtime": 1785670454.9921699,
+    "ast_hash": "0e14f6112fa1abc50ab0ae65e6003ca5",
+    "semantic_hash": "0e14f6112fa1abc50ab0ae65e6003ca5"
+  },
+  "demo/uts.html": {
+    "mtime": 1785670454.9971662,
+    "ast_hash": "16e2eec5270033199b2d0e340f3ede2f",
+    "semantic_hash": "16e2eec5270033199b2d0e340f3ede2f"
+  },
+  "demo/v4-grading-images-matching.html": {
+    "mtime": 1785670455.0021718,
+    "ast_hash": "40da67fdfaa1895f2213a9c55d1dda57",
+    "semantic_hash": "40da67fdfaa1895f2213a9c55d1dda57"
+  },
+  "demo/v5.html": {
+    "mtime": 1785670455.0091672,
+    "ast_hash": "4dbfee383fee68aee8e5bc74c3a9f9f1",
+    "semantic_hash": "4dbfee383fee68aee8e5bc74c3a9f9f1"
+  },
+  "index.html": {
+    "mtime": 1785669570.57758,
+    "ast_hash": "3b24273cebe3a444d2321f3b35a19a64",
+    "semantic_hash": "3b24273cebe3a444d2321f3b35a19a64"
+  },
+  "lib/code-forum-tugas.gs.md": {
+    "mtime": 1785407461.097892,
+    "ast_hash": "a28bdb1fafa09e1059c597d0e2d80bde",
+    "semantic_hash": "a28bdb1fafa09e1059c597d0e2d80bde"
+  },
+  "lib/code.gs.md": {
+    "mtime": 1785579359.9067764,
+    "ast_hash": "2740a5401b308f36fbb3cd293212f34f",
+    "semantic_hash": "2740a5401b308f36fbb3cd293212f34f"
+  }
+}

@@ -1,0 +1,126 @@
+﻿<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tutorial Materi dan Aktivitas Kuis</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #202124; line-height: 1.55; }
+    body { max-width: 900px; margin: auto; padding: 2rem 1rem; }
+    pre { overflow-x: auto; padding: 1rem; background: #f3f4f6; border-radius: .5rem; }
+    code { font-family: ui-monospace, monospace; }
+    .note { padding: 1rem; border-left: 4px solid #6750a4; background: #f4f0ff; }
+    li { margin: .45rem 0; }
+  </style>
+  <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  
+    <style>
+    body.dark-mode {
+      background-color: #0d0f14;
+      color: #e8eaf0;
+      color-scheme: dark;
+      --ddd-theme-default-surface: #12141a;
+      --ddd-theme-polaris-surface: #1b1e27;
+      --ddd-theme-polaris-surface-hover: #242836;
+      --ddd-theme-polaris-border: #343b4e;
+      --ddd-theme-default-text: #e8eaf0;
+      --ddd-theme-primary: #b8a6ff;
+      --ddd-theme-secondary: #a5adbd;
+      --ddd-theme-accent: #8b6ef7;
+      --ddd-theme-success-light: #15332a;
+      --ddd-theme-success-text: #4ade80;
+      --ddd-theme-on-success: #d1fae5;
+      --ddd-theme-on-primary: #12141a;
+    }
+    body.dark-mode pre { background: #1b1e27; color: #e8eaf0; }
+    body.dark-mode code { color: #b8a6ff; }
+    body.dark-mode .note { background: #241f33; border-left-color: #b8a6ff; }
+    body.dark-mode .hasil-box { background: #1b1e27; color: #d1fae5; }
+    body.dark-mode table, body.dark-mode th, body.dark-mode td { border-color: #343b4e; }
+  </style>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  </head>
+<body>
+  <h1>Tutorial Membuat Materi, Aktivitas, dan Kuis</h1>
+  <p>Gunakan tutorial ini untuk membuat satu pertemuan, merekam aktivitas siswa, menyimpan hasil kuis, dan membaca rekap.</p>
+
+  <h2>1. Siapkan Apps Script</h2>
+  <ol>
+    <li>Buka Google Spreadsheet yang dipakai aplikasi.</li>
+    <li>Buka <strong>Extensions â†’ Apps Script</strong>.</li>
+    <li>Tempel kode dari <code>lib/code.gs</code>, simpan, lalu jalankan fungsi pengujian bila diperlukan.</li>
+    <li>Deploy sebagai Web app dengan <strong>Execute as: Me</strong> dan akses <strong>Anyone</strong>.</li>
+    <li>Salin URL yang berakhiran <code>/exec</code>.</li>
+    <li>Setelah mengubah Apps Script, selalu buat <strong>New version</strong> pada deployment.</li>
+  </ol>
+
+  <h2>2. Buat materi dan pertemuan</h2>
+  <p>Pasang elemen dashboard dengan nama pertemuan yang diinginkan:</p>
+  <pre><code>&lt;quiz-dashboard
+  apps-script-url="https://script.google.com/macros/s/DEPLOYMENT_ID/exec"
+  sheet-name="Pertemuan 2"&gt;
+&lt;/quiz-dashboard&gt;</code></pre>
+  <p>Nama tersebut membuat sheet hasil <code>Pertemuan 2 - Kuis</code> dan <code>Pertemuan 2 - Aktivitas</code>.</p>
+
+  <h2>3. Buat aktivitas materi</h2>
+  <p>Gunakan tipe aktivitas berikut pada materi:</p>
+  <ul>
+    <li><code>reading</code> â€” siswa membaca materi/scroll.</li>
+    <li><code>quiz</code> â€” aktivitas soal atau evaluasi singkat.</li>
+    <li><code>discussion</code> â€” diskusi atau forum.</li>
+    <li><code>download</code> â€” mengunduh bahan.</li>
+  </ul>
+  <p>Setiap aktivitas dikirim dengan data seperti:</p>
+  <pre><code>{
+  "type": "attendance",
+  "activityType": "reading",
+  "description": "Membaca materi pelajaran",
+  "name": "Nama Siswa",
+  "studentId": "STD-12345678",
+  "nis": "12345",
+  "sheet": "Pertemuan 2"
+}</code></pre>
+  <p>Pastikan siswa sudah login agar <code>studentId</code>, NIS, absen, kelas, dan nama otomatis ikut terkirim.</p>
+
+  <h2>4. Lihat hasil</h2>
+  <ul>
+    <li><strong>Pertemuan 2 - Aktivitas</strong>: detail waktu, siswa, tipe aktivitas, dan deskripsi.</li>
+    <li><strong>Pertemuan 2 - Kuis</strong>: detail skor dan metadata siswa.</li>
+    <li><strong>Rangkuman</strong>: total kuis, skor, total aktivitas, reading, quiz activity, discussion, download, dan jumlah pertemuan.</li>
+  </ul>
+  <div class="note">Jika data baru belum muncul, pastikan URL deployment sudah diperbarui dan jalankan ulang aksi setelah deployment baru aktif. Data lama yang hanya memiliki nama tidak dapat dikaitkan ke Student ID secara otomatis.</div>
+
+  <h2>5. Pemeriksaan cepat</h2>
+  <ol>
+    <li>Login memakai kombinasi NIS + email.</li>
+    <li>Buka materi pada <code>Pertemuan 2</code>.</li>
+    <li>Lakukan reading, discussion, atau download.</li>
+    <li>Kerjakan kuis.</li>
+    <li>Periksa tiga sheet di atas.</li>
+    <li>Pastikan baris baru memiliki Student ID dan NIS.</li>
+  </ol>
+</body>
+</html>

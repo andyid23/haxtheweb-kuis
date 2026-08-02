@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: lecturer-console — Panel Dosen</title>
+  <script type="module" src="../lib/lecturer-console.js"></script>
+  <script type="module" src="../lib/explode-quiz.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 900px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;lecturer-console&gt;</h1>
+  <div class="info">
+    Panel dosen: muat soal (template lokal / Bank Soal via <code>getBankSoal</code>),
+    terapkan ke kuis yang dirujuk <code>quiz-selector</code> (default <code>#quiz</code>),
+    serta laporan rekap. Atribut: <code>apps-script-url</code>, <code>quiz-selector</code>,
+    <code>kategori</code> (<code>campur</code> | <code>literasi</code> | <code>numerasi</code>).
+    Tanpa <code>apps-script-url</code>, tombol "Template Lokal" tetap berfungsi.
+  </div>
+
+  <lecturer-console id="console"
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    quiz-selector="#quiz"
+    kategori="campur"></lecturer-console>
+
+  <h3>Kuis target (diisi ulang dari konsol di atas)</h3>
+  <explode-quiz id="quiz" questions='[
+    {"q":"1 + 1 = ?","options":["1","2","3"],"correctIndex":1},
+    {"q":"Ibu kota Indonesia?","options":["Bandung","Jakarta","Surabaya"],"correctIndex":1}
+  ]'></explode-quiz>
+</body>
+</html>

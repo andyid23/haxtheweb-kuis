@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: forum-component — Diskusi Forum</title>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/forum-component.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;forum-component&gt;</h1>
+  <div class="info">
+    Thread diskusi per topik: baca komentar &amp; kirim komentar (terhitung kriteria kehadiran
+    "diskusi forum"). Atribut: <code>forum-api-url</code> (deploy Web App kode forum),
+    <code>apps-script-url</code>, <code>forum-topic</code>, <code>sheet-name</code>,
+    <code>hide-delete</code>, <code>view-mode</code>, data siswa dari sesi login.
+    Event: <code>discussion-saved</code>.
+  </div>
+
+  <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+
+  <forum-component id="forum"
+    forum-api-url="https://script.google.com/macros/s/AKfycbyWqGKSDIm1el5_fzK331QIDWGR-xvpm1dQmaObC_2D0lHbStxAPHIxYFNktbicy6-NwQ/exec"
+    apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"
+    forum-topic="Diskusi Materi Pertemuan 1"
+    sheet-name="Pertemuan 1"></forum-component>
+</body>
+</html>

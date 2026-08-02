@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Demo: quiz-user-auth — Login & Registrasi</title>
+  <script type="module" src="../lib/quiz-user-auth.js"></script>
+  <script type="module" src="../lib/ddd-dark-mode.js"></script>
+  <style>
+    body { padding: 24px; max-width: 800px; margin: 0 auto; font-family: system-ui; }
+    h1 { color: #6750a4; }
+    .info { background: #f3f0fa; border: 1px solid #c7b3fc; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; }
+    .event-log { background: #fafafa; border: 1px dashed #bbb; border-radius: 8px; padding: 12px; margin-top: 16px; font-family: monospace; font-size: 12px; min-height: 80px; }
+    .event-log .e { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <h1>Demo: &lt;quiz-user-auth&gt;</h1>
+  <div class="info">
+    Login/registrasi siswa dengan Google Sheets (<code>apps-script-url</code>).
+    Atribut: <code>apps-script-url</code>, <code>auto-login</code> (Boolean).
+    Event yang dipancarkan: <code>quiz-user-login</code>, <code>quiz-user-logout</code>, <code>quiz-user-session-changed</code>.
+    Login diperlukan sebagai sesi untuk komponen lain (attendance, assignment, forum).
+  </div>
+
+  <quiz-user-auth id="auth" apps-script-url="https://script.google.com/macros/s/AKfycbzwwv-XI1EC3puQdS8rsTjOobw8rmNXOqOkklInfFB5xBdQJ83po2lq-gxRtDuiE5LG/exec"></quiz-user-auth>
+
+  <h3>Log Event</h3>
+  <div id="events" class="event-log"><em>Login atau daftar untuk melihat event…</em></div>
+
+  <script type="module">
+    const log = (msg) => {
+      const box = document.getElementById("events");
+      const line = document.createElement("div");
+      line.className = "e";
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      box.prepend(line);
+    };
+    window.addEventListener("quiz-user-login", (e) => log(`quiz-user-login → ${e.detail?.user?.name || "siswa"}`));
+    window.addEventListener("quiz-user-session-changed", (e) => log(`quiz-user-session-changed → NIS ${e.detail?.nis || "?"}`));
+    window.addEventListener("quiz-user-logout", () => log("quiz-user-logout"));
+  </script>
+</body>
+</html>
