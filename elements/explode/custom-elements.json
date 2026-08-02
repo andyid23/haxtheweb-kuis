@@ -139,6 +139,11 @@
             },
             {
               "kind": "field",
+              "name": "_confettiFn",
+              "default": "confetti"
+            },
+            {
+              "kind": "field",
               "name": "questions",
               "privacy": "public",
               "type": {
@@ -157,6 +162,37 @@
               },
               "default": "\"submitQuizResult\"",
               "attribute": "scriptFunctionName"
+            },
+            {
+              "kind": "field",
+              "name": "spreadsheetId",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "attribute": "spreadsheet-id",
+              "reflects": true
+            },
+            {
+              "kind": "field",
+              "name": "accessToken",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "attribute": "access-token"
+            },
+            {
+              "kind": "field",
+              "name": "appsScriptUrl",
+              "privacy": "public",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "attribute": "apps-script-url"
             },
             {
               "kind": "field",
@@ -375,7 +411,7 @@
               "type": {
                 "text": "object"
               },
-              "default": "{\n      quizTitle: \"Kuis Interaktif\",\n      quizInstruction: \"Masukkan nama Anda untuk memulai kuis.\",\n      namePlaceholder: \"Nama Anda...\",\n      startButton: \"Mulai Kuis\",\n      validationNameEmpty: \"Nama tidak boleh kosong.\",\n      validationNameShort: \"Nama harus lebih dari 2 karakter.\",\n\n      // Layar_Soal\n      questionOf: \"Soal\",\n      of: \"dari\",\n      scoreLabel: \"Skor\",\n      feedbackCorrect: \"Mantap, Benar!\",\n      feedbackWrongPrefix: \"Yah, Salah. Jawaban benar: \",\n\n      // Layar_Hasil\n      resultHeading: \"Hasil Kuis\",\n      resultName: \"Nama\",\n      resultScore: \"Skor\",\n      resultTotal: \"Total Soal\",\n      resultPercentage: \"Persentase\",\n      messageHigh: \"Luar Biasa! Kamu Hebat!\",\n      messageMedium: \"Bagus! Terus Berlatih!\",\n      messageLow: \"Jangan Menyerah! Coba Lagi!\",\n      restartButton: \"Mulai Ulang\",\n\n      // Editor\n      editTitle: \"Edit Soal Kuis\",\n      closeEditor: \"Tutup Editor\",\n      questionPlaceholder: \"Tulis pertanyaan...\",\n      choicePlaceholder: \"Pilihan {N}\",\n      choiceCorrectLabel: \"Benar\",\n      addQuestionBtn: \"Tambah Soal\",\n      editQuestionBtn: \"Edit\",\n      deleteQuestionBtn: \"Hapus\",\n      saveEditBtn: \"Simpan Perubahan\",\n      cancelEditBtn: \"Batal\",\n      saveAllBtn: \"Simpan & Keluar\",\n      cancelAllBtn: \"Batal\",\n      minQuestionsError: \"Minimal 3 soal harus tersedia\",\n      emptyQuestionError: \"Pertanyaan tidak boleh kosong\",\n      emptyChoiceError: \"Semua pilihan jawaban harus diisi\",\n\n      // Aksesibilitas aria-label\n      ariaNameInput: \"Kolom nama siswa\",\n      ariaStartButton: \"Tombol mulai kuis\",\n      ariaAnswerButton: \"Pilihan jawaban\",\n      ariaRestartButton: \"Mulai ulang kuis\",\n      ariaScoreDisplay: \"Skor saat ini\",\n      ariaProgressLabel: \"Kemajuan kuis\",\n      ariaFeedback: \"Umpan balik jawaban\",\n\n      // Editor aria-labels\n      ariaEditTitle: \"Panel editor soal kuis\",\n      ariaCloseEditor: \"Tutup panel editor\",\n      ariaAddForm: \"Formulir tambah soal baru\",\n      ariaQuestionInput: \"Teks pertanyaan\",\n      ariaChoiceInput: \"Pilihan jawaban {N}\",\n      ariaCorrectChoice: \"Pilihan jawaban benar\",\n      ariaQuestionsList: \"Daftar soal yang tersedia\",\n      ariaQuestionCard: \"Kartu soal\",\n      ariaEditQuestion: \"Edit soal ini\",\n      ariaDeleteQuestion: \"Hapus soal ini\",\n      ariaSaveEdit: \"Simpan perubahan soal\",\n      ariaCancelEdit: \"Batal mengedit soal\",\n      ariaSaveAll: \"Simpan semua perubahan dan keluar\",\n      ariaCancelAll: \"Batal semua perubahan dan keluar\",\n    }"
+              "default": "{\n      quizTitle: \"Kuis Interaktif\",\n      quizInstruction: \"Masukkan nama Anda yaa untuk memulai kuis.\",\n      namePlaceholder: \"Nama Anda...\",\n      startButton: \"Mulai Kuis\",\n      validationNameEmpty: \"Nama tidak boleh kosong.\",\n      validationNameShort: \"Nama harus lebih dari 2 karakter.\",\n\n      // Layar_Soal\n      questionOf: \"Soal\",\n      of: \"dari\",\n      scoreLabel: \"Skor\",\n      feedbackCorrect: \"Mantap, Benar!\",\n      feedbackWrongPrefix: \"Yah, Salah. Jawaban benar: \",\n\n      // Layar_Hasil\n      resultHeading: \"Hasil Kuis\",\n      resultName: \"Nama\",\n      resultScore: \"Skor\",\n      resultTotal: \"Total Soal\",\n      resultPercentage: \"Persentase\",\n      messageHigh: \"Luar Biasa! Kamu Hebat!\",\n      messageMedium: \"Bagus! Terus Berlatih!\",\n      messageLow: \"Jangan Menyerah! Coba Lagi!\",\n      restartButton: \"Mulai Ulang\",\n\n      // Editor\n      editTitle: \"Edit Soal Kuis\",\n      closeEditor: \"Tutup Editor\",\n      questionPlaceholder: \"Tulis pertanyaan...\",\n      choicePlaceholder: \"Pilihan {N}\",\n      choiceCorrectLabel: \"Benar\",\n      addQuestionBtn: \"Tambah Soal\",\n      editQuestionBtn: \"Edit\",\n      deleteQuestionBtn: \"Hapus\",\n      saveEditBtn: \"Simpan Perubahan\",\n      cancelEditBtn: \"Batal\",\n      saveAllBtn: \"Simpan & Keluar\",\n      cancelAllBtn: \"Batal\",\n      minQuestionsError: \"Minimal 3 soal harus tersedia\",\n      emptyQuestionError: \"Pertanyaan tidak boleh kosong\",\n      emptyChoiceError: \"Semua pilihan jawaban harus diisi\",\n\n      // Aksesibilitas aria-label\n      ariaNameInput: \"Kolom nama siswa\",\n      ariaStartButton: \"Tombol mulai kuis\",\n      ariaAnswerButton: \"Pilihan jawaban\",\n      ariaRestartButton: \"Mulai ulang kuis\",\n      ariaScoreDisplay: \"Skor saat ini\",\n      ariaProgressLabel: \"Kemajuan kuis\",\n      ariaFeedback: \"Umpan balik jawaban\",\n\n      // Editor aria-labels\n      ariaEditTitle: \"Panel editor soal kuis\",\n      ariaCloseEditor: \"Tutup panel editor\",\n      ariaAddForm: \"Formulir tambah soal baru\",\n      ariaQuestionInput: \"Teks pertanyaan\",\n      ariaChoiceInput: \"Pilihan jawaban {N}\",\n      ariaCorrectChoice: \"Pilihan jawaban benar\",\n      ariaQuestionsList: \"Daftar soal yang tersedia\",\n      ariaQuestionCard: \"Kartu soal\",\n      ariaEditQuestion: \"Edit soal ini\",\n      ariaDeleteQuestion: \"Hapus soal ini\",\n      ariaSaveEdit: \"Simpan perubahan soal\",\n      ariaCancelEdit: \"Batal mengedit soal\",\n      ariaSaveAll: \"Simpan semua perubahan dan keluar\",\n      ariaCancelAll: \"Batal semua perubahan dan keluar\",\n    }"
             },
             {
               "kind": "field",
@@ -392,6 +428,20 @@
               },
               "attribute": "editing",
               "reflects": true
+            }
+          ],
+          "events": [
+            {
+              "name": "quiz-saved",
+              "type": {
+                "text": "CustomEvent"
+              }
+            },
+            {
+              "name": "questions-changed",
+              "type": {
+                "text": "CustomEvent"
+              }
             }
           ],
           "attributes": [
@@ -417,6 +467,30 @@
               },
               "default": "\"submitQuizResult\"",
               "fieldName": "scriptFunctionName"
+            },
+            {
+              "name": "spreadsheet-id",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "fieldName": "spreadsheetId"
+            },
+            {
+              "name": "access-token",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "fieldName": "accessToken"
+            },
+            {
+              "name": "apps-script-url",
+              "type": {
+                "text": "string"
+              },
+              "default": "\"\"",
+              "fieldName": "appsScriptUrl"
             },
             {
               "name": "editable",
